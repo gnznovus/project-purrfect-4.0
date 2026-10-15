@@ -4,11 +4,11 @@ Python 3.14+ foundation for Purra, a product-specialized guidance system.
 
 ## Status
 
-**Goal 1.1: deterministic guidance contract (development slice).**
+**Goal 1.1:** deterministic guidance contract.
 
-Implemented: typed input requirements, stable option IDs, sequential target collection, input validation, and guidance-ready responses.
+**Goal 1.2:** provider-neutral objective selection using an LLM, with Ollama as the first real adapter. The LLM can select only advertised product objectives. Missing inputs, allowed options, target IDs and output structure are controlled by the product's guidance definition. Invalid model output fails closed to an unsupported response.
 
-Not implemented: LLM reasoning, RAG, product-state retrieval, real Child communications, permissions, automation, execution, Sophira, or Aurora integration. Test examples are fixtures, **not** live product knowledge. A guidance-ready response does **not** authorize or perform an action.
+Not implemented: real product/RAG retrieval, diagnosis, general answer generation, Child networking, persistence, premium automation, execution, Sophira or Aurora integration. The code never executes client product actions. The examples in tests are fixed fixtures, not live product knowledge.
 
 ## Architecture direction
 
@@ -23,13 +23,17 @@ Clients interact with Child. Developers may communicate with Purra directly. No 
 
 Goal → Contract → Implement → Validate → Document.
 
-Windows PowerShell, using installed Python 3.14 (no virtual environment):
+Windows PowerShell using Python 3.14 directly (no virtual environment):
 
 ```powershell
 py -3.14 -m pip install -e ".[dev]"
 py -3.14 -m pytest
 ```
 
-## Guidance contract example
+CI automatically installs and runs all tests for pushes and pull requests.
 
-`GuidanceSession` accepts a product-supplied `GuidanceDefinition` listing required inputs and valid target IDs. `current()` returns a message, status and structured interaction; `submit(key, value)` validates and advances. No LLM-generated options or command execution.
+## Usage boundary
+
+`PurraBrain(model).start(user_message, product_objectives)` selects an advertised `ProductObjective` by ID and returns a `GuidanceSession` with typed interactive inputs. A product integration must supply its own objective catalog and actual target options. `OllamaModel` communicates with a running local Ollama server (default model `llama3.2:3b`) but live-model testing requires that server/model; deterministic CI tests use a fake model and a mocked HTTP adapter.
+
+Purra's output does not authorize or run commands. Developer setup/test commands run through project CI, not through the LLM.
