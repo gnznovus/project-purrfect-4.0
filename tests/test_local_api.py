@@ -48,3 +48,23 @@ def test_unsupported_and_validation():
         pass
     else:
         raise AssertionError("Malformed inventory accepted")
+
+
+def test_wordpress_password_question_returns_only_login_evidence():
+    state = LocalState()
+    result = respond(request("password-test", "I forgot my WordPress login password"), state)
+    assert result["scope"] == "wordpress"
+    assert result["status"] == "grounded"
+    assert [source["id"] for source in result["sources"]] == ["wp-login-basic"]
+    assert "password reset" in result["message"]
+    assert "cache" not in result["message"].lower()
+    assert "Edit option" not in result["message"]
+
+
+def test_wordpress_unrelated_question_does_not_dump_faq():
+    state = LocalState()
+    result = respond(request("unknown-test", "WordPress quantum unicorn"), state)
+    assert result["status"] == "needs_input"
+    result = respond(request("unknown-test", "", "wordpress"), state)
+    assert result["status"] == "clarification"
+    assert result["sources"] == []
