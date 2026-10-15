@@ -28,7 +28,12 @@ jobs:
           php -l wordpress/lab/mock-layout/mock-layout.php
           php -l wordpress/lab/mock-translation/mock-translation.php
           php -l tests/php/test_heartbeat.php
+          php -l wordpress/purr-child/src/chat.php
       - name: PHP discovery smoke
         run: |
           php tests/php/test_discovery.php
           php tests/php/test_heartbeat.php
+      - name: Local chat JavaScript syntax
+        run: node --check wordpress/purr-child/assets/chat.js
+      - name: Docker Compose configuration
+        run: docker compose -f wordpress/lab/compose.yaml config --quiet
