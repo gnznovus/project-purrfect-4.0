@@ -78,3 +78,25 @@ $GLOBALS['snapshot']['active'][] = ['kind' => 'plugin', 'key' => 'mock/main.php'
 purr_child_refresh_registry();
 verify($digest !== get_option('purr_child_registry_digest'), 'Activation must update digest');
 echo "Heartbeat tests passed\n";
+
+// Real WordPress invokes action listeners without a timestamp argument.
+// Its hook dispatcher can supply an empty string, so the runner must use
+// a no-argument adapter rather than registering the typed clock directly.
+$GLOBALS['actions'] = [];
+function add_action($name, $callback, $priority = 10, $accepted_args = 1) {
+    $GLOBALS['actions'][$name][] = $callback;
+}
+function do_action($name, ...$args) {
+    foreach ($GLOBALS['actions'][$name] ?? [] as $callback) {
+        $callback(...($args ?: ['']));
+    }
+}
+function add_filter($name, $callback) {}
+function register_deactivation_hook($path, $callback) {}
+function wp_next_scheduled($hook) { return 1; }
+function wp_clear_scheduled_hook($hook) {}
+require dirname(__DIR__, 2) . '/wordpress/purr-child/src/runner.php';
+verify(isset($GLOBALS['actions']['purrfect/heartbeat_tick']),
+    'Heartbeat action must be registered');
+do_action('purrfect/heartbeat_tick');
+echo "WordPress no-argument hook regression passed\\n";
