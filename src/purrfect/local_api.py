@@ -82,8 +82,11 @@ def respond(payload: dict, state: LocalState) -> dict:
                 try:
                     decision = asyncio.run(select_scope(state.model, message, knowledge))
                 except Exception:
-                    # Model availability must not block verified local guidance.
-                    decision = None
+                    # Do not disguise an unavailable Brain as a successful inference.
+                    answer = _clarify(knowledge)
+                    answer["message"] = "The local Brain is unavailable. Please choose a supported area below."
+                    answer["routing"] = "brain-unavailable"
+                    return answer
                 if decision is not None:
                     answer = _choose(message, decision, knowledge)
                     if answer["status"] in ("grounded", "unsupported"):
