@@ -112,3 +112,25 @@ Communication passes through real HTTP and JSON (WordPress → Python container)
 
 Test failures: `docker compose -f wordpress/lab/compose.yaml logs --tail=80 purra wp`.
 Stop without deleting database: `docker compose -f wordpress/lab/compose.yaml down`. No `down -v`.
+
+
+## Goal 1.6 — Optional local Ollama Brain integration
+
+The WordPress lab's existing chat can now route new questions through `select_scope`, backed by the existing `OllamaModel` adapter and a constrained selection schema. Only active product IDs, basic WordPress, out-of-scope, or clarification are permitted; responses still come verbatim from verified evidence, not generated troubleshooting text. Interactive selections remain deterministic and validated against the latest installed inventory.
+
+The lab defaults to the **previous deterministic mode** until Ollama is explicitly enabled. To enable real local model routing, run from the repo root:
+
+```powershell
+git switch feat/purra-ollama-brain-1-6
+docker compose -f wordpress/lab/compose.yaml --profile brain up -d --build
+docker compose -f wordpress/lab/compose.yaml exec ollama ollama pull llama3.2:3b
+$env:PURRA_BRAIN_MODE = "ollama"
+docker compose -f wordpress/lab/compose.yaml --profile brain up -d --force-recreate purra
+docker compose -f wordpress/lab/compose.yaml logs --tail=30 purra
+```
+
+Open http://localhost:8084/wp-admin/ and use **Purr Child Lab**. The transcript includes a routing marker (`brain`, `brain-clarify`, or `brain-unavailable`) when Ollama mode is active. Compare an explicit mock translation request, ambiguous editing question, ordinary WordPress password issue, and unsupported question. The Python model timeout is 5 seconds; unavailable models yield an explicit explanation and interactive choices, never fabricated guidance.
+
+PowerShell environment overrides apply to the Compose invocation that starts the service. To return to deterministic mode, set `$env:PURRA_BRAIN_MODE = "deterministic"` and recreate just `purra`. The Ollama model remains a **local optional Docker service**, with no host port published.
+
+**Limitations:** This is classification + verified retrieval, not free-form LLM answers, complete 1.4 multi-turn reasoning, production authentication, or semantic RAG. CI tests use fake models and do not verify actual Ollama availability or inference quality. Only enable in the isolated Docker lab.
