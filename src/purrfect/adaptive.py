@@ -38,6 +38,7 @@ class AdaptiveGuide:
         self.catalog = {item.id: item for item in objectives}
         self.engines = {item.id: engine_type(item.guidance) for item in objectives}
         self.current: dict[str, str] = {}
+        self._generations: dict[str, int] = {}
 
     def _get(self, session_id: str):
         if not session_id or session_id not in self.current:
@@ -62,7 +63,8 @@ class AdaptiveGuide:
         identifier = data.get("objective_id") if set(data) == {"objective_id"} else None
         if not isinstance(identifier, str) or identifier not in self.catalog:
             return self._clarify("I couldn't match that request to available product guidance.")
-        result = self.engines[identifier].send(session_id, Turn("start"))
+        self._generations[session_id] = 0
+        result = self.engines[identifier].send(self._storage_key(session_id), Turn("start"))
         self.current[session_id] = identifier
         return result
 
@@ -71,7 +73,7 @@ class AdaptiveGuide:
             raise ValueError("Message cannot be empty")
         objective_id, engine = self._get(session_id)
         # Product state, not the model, supplies every permissible input.
-        state = self._state(engine, session_id)
+        state = self._state(engine, self._storage_key(session_id))
         guidance = self.catalog[objective_id].guidance
         raw = await self.model.complete(
             "Choose exactly one route from continue, correct, switch, clarify. "
@@ -96,7 +98,7 @@ class AdaptiveGuide:
                 return self._switch(session_id, objective_id, route.objective_id, state)
             if route.key is None or route.value is None:
                 raise ValueError("Missing field/value")
-            return engine.send(session_id, Turn(
+            return engine.send(self._storage_key(session_id), Turn(
                 "answer" if route.kind == "continue" else "correct",
                 route.key, route.value,
             ))
@@ -125,11 +127,18 @@ class AdaptiveGuide:
         # Switch only after all validations; never overwrite a previously
         # initialized target session.
         new_engine = self.engines[new_id]
-        response = new_engine.send(session_id, Turn("start"))
+        next_generation = self._generations[session_id] + 1
+        storage_key = self._storage_key(session_id, next_generation)
+        response = new_engine.send(storage_key, Turn("start"))
         for key, value in reusable:
-            response = new_engine.send(session_id, Turn("answer", key, value))
+            response = new_engine.send(storage_key, Turn("answer", key, value))
         self.current[session_id] = new_id
+        self._generations[session_id] = next_generation
         return response
+
+    def _storage_key(self, session_id: str, generation: int | None = None) -> str:
+        index = self._generations[session_id] if generation is None else generation
+        return f"{session_id}::revision:{index}"
 
     @staticmethod
     def _parse(raw: str) -> dict:
