@@ -1,4 +1,13 @@
 services:
+  purra:
+    image: python:3.14-slim
+    working_dir: /workspace
+    command: ["sh", "-c", "pip install --no-cache-dir -e . && python -m purrfect.local_api"]
+    volumes:
+      - ../..:/workspace:ro
+    expose:
+      - "8765"
+
   db:
     image: mariadb:11.4
     environment:
@@ -32,6 +41,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      purra:
+        condition: service_started
 
   clock:
     build: .
