@@ -75,7 +75,7 @@ def respond(payload: dict, state: LocalState) -> dict:
             state.sessions[session_id] = message
             words = set(message.lower().split())
             hits = [p.id for p in knowledge.products.values()
-                    if words & set((" ".join(p.capabilities) + " " + p.id).replace("-", " ").lower().split())]
+                    if words & (set(p.id.replace("-", " ").lower().split()) - {"mock", "product", "plugin"})]
             if len(hits) == 1:
                 answer = _choose(message, hits[0], knowledge)
                 if answer["status"] == "grounded":
