@@ -3,7 +3,10 @@
 defined('ABSPATH') || exit;
 
 add_filter('purrfect/heartbeat_components', 'purr_child_register_heartbeat');
-add_action('purrfect/heartbeat_tick', 'purr_child_heartbeat_tick');
+// Keep WordPress's no-argument action separate from the injectable test clock.
+add_action('purrfect/heartbeat_tick', static function (): void {
+    purr_child_heartbeat_tick();
+});
 
 function purr_child_dirty_on_change(): void {
     purr_child_heartbeat_dirty('registry');
