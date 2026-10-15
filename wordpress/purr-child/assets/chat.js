@@ -35,6 +35,7 @@
         typeof packet.data === 'string' ? packet.data : 'Request failed');
       const data = packet.data;
       append('Purra', data.message);
+      if (data.routing) append('Routing', data.routing);
       if (data.interaction?.options?.length) {
         for (const option of data.interaction.options) {
           const button = document.createElement('button');
