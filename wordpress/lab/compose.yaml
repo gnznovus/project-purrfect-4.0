@@ -1,0 +1,56 @@
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: local-development-only
+      MARIADB_ROOT_PASSWORD: local-root-only
+    volumes:
+      - wp_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+
+  wp:
+    build: .
+    ports:
+      - "8084:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('DISABLE_WP_CRON', true);
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  clock:
+    build: .
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do php /opt/purr-child-heartbeat.php; sleep 60; done"]
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+      - ./heartbeat.php:/opt/purr-child-heartbeat.php:ro
+    depends_on:
+      - wp
+
+volumes:
+  wp_db:
+  wp_data:
