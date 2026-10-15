@@ -14,7 +14,7 @@ def inventory():
 
 def request(session, message, selection=None, registry=None):
     return {"session_id": session, "message": message,
-            "selection": selection, "inventory": registry or inventory()}
+            "selection": selection, "inventory": inventory() if registry is None else registry}
 
 
 def test_question_and_interactive_selection():
