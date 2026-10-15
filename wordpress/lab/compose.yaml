@@ -36,7 +36,7 @@ services:
   clock:
     build: .
     entrypoint: ["/bin/sh", "-c"]
-    command: ["while true; do php /opt/purr-child-heartbeat.php; sleep 60; done"]
+    command: ["while true; do sleep $(($(date +%s) % 60 == 0 ? 60 : 60 - $(date +%s) % 60)); php /opt/purr-child-heartbeat.php || true; done"]
     environment:
       WORDPRESS_DB_HOST: db
       WORDPRESS_DB_USER: wordpress
@@ -50,6 +50,24 @@ services:
       - ./heartbeat.php:/opt/purr-child-heartbeat.php:ro
     depends_on:
       - wp
+
+  cli:
+    image: wordpress:cli-php8.3
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
 
 volumes:
   wp_db:
