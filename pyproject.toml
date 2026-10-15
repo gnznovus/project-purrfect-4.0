@@ -7,7 +7,7 @@ name = "project-purrfect"
 version = "0.1.0"
 description = "Reusable AI intelligence foundation and product-specialized assistants"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = []
 
 [project.optional-dependencies]
