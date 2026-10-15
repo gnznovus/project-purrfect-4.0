@@ -37,3 +37,10 @@ CI automatically installs and runs all tests for pushes and pull requests.
 `PurraBrain(model).start(user_message, product_objectives)` selects an advertised `ProductObjective` by ID and returns a `GuidanceSession` with typed interactive inputs. A product integration must supply its own objective catalog and actual target options. `OllamaModel` communicates with a running local Ollama server (default model `llama3.2:3b`) but live-model testing requires that server/model; deterministic CI tests use a fake model and a mocked HTTP adapter.
 
 Purra's output does not authorize or run commands. Developer setup/test commands run through project CI, not through the LLM.
+
+
+## Goal 1.3 — Stateful conversation experiment
+
+Two isolated adapters (`CustomConversation` and `LangGraphConversation`) use the exact same pure domain transition function in `stateful.py`. Parameterized tests compare ordered multi-turn input, target corrections, session isolation, and rejection of invalid answers. Correcting an earlier answer invalidates downstream selections.
+
+LangGraph uses an in-memory checkpointer, not durable storage. State does **not** survive a process restart. This experiment does not test real LLM decisions, interruption/resume through external IO, performance, or production persistence. LangGraph is installed as a **development-only** dependency while we evaluate it. No production adoption decision has been made.
