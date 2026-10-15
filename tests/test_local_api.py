@@ -68,3 +68,44 @@ def test_wordpress_unrelated_question_does_not_dump_faq():
     result = respond(request("unknown-test", "", "wordpress"), state)
     assert result["status"] == "clarification"
     assert result["sources"] == []
+
+
+class ScriptedBrain:
+    def __init__(self, answer):
+        self.answer = answer
+
+    async def complete(self, system, user):
+        return self.answer
+
+
+def test_brain_verified_wordpress_answer_only():
+    state = LocalState(model=ScriptedBrain('{"selection":"wordpress"}'))
+    result = respond(request("brain-1", "I forgot my WordPress login password"), state)
+    assert result["routing"] == "brain"
+    assert [e["id"] for e in result["sources"]] == ["wp-login-basic"]
+
+
+def test_brain_uncertainty_and_invented_product_clarify():
+    for answer in ('{"selection":null}', '{"selection":"fake-product"}', 'not json'):
+        state = LocalState(model=ScriptedBrain(answer))
+        result = respond(request("brain-2", "I cannot edit my page"), state)
+        assert result["status"] == "needs_input"
+        assert result["routing"] == "brain-clarify"
+
+
+def test_brain_rejects_deactivated_products():
+    state = LocalState(model=ScriptedBrain('{"selection":"mock-layout"}'))
+    removed = {"active": [], "signals": []}
+    result = respond(request("brain-3", "Mock layout", registry=removed), state)
+    assert result["status"] == "needs_input"
+    assert result["routing"] == "brain-clarify"
+
+
+def test_unavailable_model_degrades_to_clarification():
+    class Broken:
+        async def complete(self, system, user):
+            raise ConnectionError("offline")
+    state = LocalState(model=Broken())
+    result = respond(request("brain-4", "help translate"), state)
+    assert result["status"] == "needs_input"
+    assert result["routing"] == "brain-clarify"
