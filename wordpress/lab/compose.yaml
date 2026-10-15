@@ -1,10 +1,21 @@
 services:
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["brain"]
+    volumes:
+      - ollama_models:/root/.ollama
+
   purra:
-    image: python:3.14-slim
+    build:
+      context: .
+      dockerfile: purra.Dockerfile
     working_dir: /workspace
     command: ["python", "-m", "purrfect.local_api"]
     environment:
       PYTHONPATH: /workspace/src
+      PURRA_BRAIN_MODE: ${PURRA_BRAIN_MODE:-deterministic}
+      PURRA_OLLAMA_URL: http://ollama:11434
+      PURRA_OLLAMA_MODEL: ${PURRA_OLLAMA_MODEL:-llama3.2:3b}
     volumes:
       - ../..:/workspace:ro
     expose:
@@ -83,5 +94,6 @@ services:
     profiles: ["tools"]
 
 volumes:
+  ollama_models:
   wp_db:
   wp_data:
