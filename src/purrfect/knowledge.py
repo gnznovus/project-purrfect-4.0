@@ -63,7 +63,7 @@ class SiteKnowledge:
         candidates = [item for pid in product_ids for item in self.products[pid].evidence]
         if general_wp:
             candidates.extend(self.wordpress)
-        words = set(_words(query))
+        # Common conversational words must not qualify unrelated evidence.\n        words = set(_words(query)) - _STOPWORDS
         results = []
         for record in candidates:
             title = set(_words(record.title))
@@ -77,7 +77,7 @@ class SiteKnowledge:
         )[:limit])
 
 
-def _words(text: str) -> tuple[str, ...]:
+_STOPWORDS = frozenset({\n    "i", "im", "my", "me", "you", "your", "a", "an", "the", "and", "or",\n    "in", "on", "at", "to", "of", "for", "from", "is", "are", "was",\n    "were", "it", "this", "that", "do", "does", "did", "can", "could",\n    "how", "what", "where", "why", "with", "have", "has", "had",\n    "wp", "wordpress", "please", "help", "if", "but", "be",\n})\n\ndef _words(text: str) -> tuple[str, ...]:
     import re
     return tuple(re.findall(r"[\w]+", text.casefold()))
 
