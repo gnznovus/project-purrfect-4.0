@@ -22,5 +22,13 @@ jobs:
           php -l wordpress/purr-child/src/discovery.php
           php -l wordpress/examples/product-integration.php
           php -l tests/php/test_discovery.php
+          php -l wordpress/purr-child/src/heartbeat.php
+          php -l wordpress/purr-child/src/runner.php
+          php -l wordpress/lab/heartbeat.php
+          php -l wordpress/lab/mock-layout/mock-layout.php
+          php -l wordpress/lab/mock-translation/mock-translation.php
+          php -l tests/php/test_heartbeat.php
       - name: PHP discovery smoke
-        run: php tests/php/test_discovery.php
+        run: |
+          php tests/php/test_discovery.php
+          php tests/php/test_heartbeat.php
