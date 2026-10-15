@@ -71,3 +71,27 @@ Verified by shared, parameterized tests for both backends, including valid conti
 Run `py -3.14 -m pip install -e ".[dev]"` and `py -3.14 -m pytest` on Windows. CI also runs `php -l` and `php tests/php/test_discovery.php`.
 
 **Boundaries:** The Child does not provide an authenticated Python service/client or any deployment wiring yet; snapshots are supplied to Python explicitly. The PHP smoke test uses WordPress function shims and does not establish real WP runtime compatibility. PHP product signals share WordPress's plugin trust boundary and are not independently cryptographically attributable to the plugin file they claim. Do not expose plugin inventory to unauthenticated clients. Knowledge records are only as trustworthy as the participating product's declared data; the included WordPress FAQ is deliberately basic. Objective selection, coordinator persistence, real model behavior, network integration, full WordPress E2E, and real document ingestion need separate validation. Sophira and automated remediation remain out of scope.
+
+
+## Goal 1.5D — Purr Child heartbeat + Docker lab
+
+The **Child owns one traffic-independent wall-clock tick**, with independently registered component intervals. The first component is a five-minute product registry check. WordPress activation/deactivation, update and theme-switch hooks mark it dirty for the next tick. Per-component options track attempts, successes, failures and due times; `add_option` prevents normal concurrent runs, and abandoned locks expire. Failure of a component is caught and does not stop subsequent components. Changed registry snapshots are written only when their SHA-256 digest differs.
+
+To try the isolated WordPress lab (Docker Desktop and Docker Compose required):
+
+```powershell
+cd wordpress/lab
+docker compose up -d --build
+docker compose --profile tools run --rm cli wp core install --url=http://localhost:8084 --title="Purr Child Lab" --admin_user=purr-lab --admin_password="local-lab-only-change-me" --admin_email=lab@example.invalid --skip-email
+cd ../..
+py -3.14 -m pip install -e ".[dev]"
+py -3.14 wordpress/lab/acceptance.py
+```
+
+The WP site is at http://localhost:8084. The acceptance test activates two **mock products** (layout, translation), refreshes the registry through the heartbeat, checks Python knowledge separation, deactivates one mock product, confirms removal, then restores it. The Child endpoint `/wp-json/purrfect/v1/discovery` requires `manage_options`; it must not be made publicly readable.
+
+Use `docker compose -f wordpress/lab/compose.yaml down` to stop containers. Do **not** use `down -v` unless you intentionally want to erase this lab's WordPress and database volumes.
+
+The `clock` container aligns wakeups to minute boundaries; checks choose their own intervals and can be marked dirty. Normal WordPress WP-Cron is disabled inside the lab. Outside this lab, the plugin provides WP-Cron as a traffic-dependent fallback; a production-quality always-on clock requires a reliable external runner. This is **not** real-time immediate triggering: an activation marks the registry dirty and the next clock tick handles it.
+
+**Validation distinction:** CI verifies PHP syntax, simulated WordPress heartbeat behaviors, and Python tests. The opt-in Docker acceptance test needs a machine with Docker; it has not been run by this assistant. No LLM service or cross-process RPC has been wired, and retrieval uses deterministic mock knowledge rather than vector RAG. This branch must not be called production-complete.
