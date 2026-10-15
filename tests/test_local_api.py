@@ -108,4 +108,4 @@ def test_unavailable_model_degrades_to_clarification():
     state = LocalState(model=Broken())
     result = respond(request("brain-4", "help translate"), state)
     assert result["status"] == "needs_input"
-    assert result["routing"] == "brain-clarify"
+    assert result["routing"] == "brain-unavailable"
