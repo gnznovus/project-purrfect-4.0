@@ -10,7 +10,7 @@ A Python-based foundation for reusable AI intelligence and specialized product a
 
 - **Purr Base:** shared intelligence infrastructure.
 - **Purr Parent:** shared reasoning and knowledge service; also provides a developer-facing interface.
-- **Purr Child:** product-specific client interface and bounded diagnostic endpoint.
+- **Purr Child:** product-specific client interface and bounded diagnostic endpoint. Each Child will be identified using UUIDv7; identity issuance, ownership, and lifecycle contracts remain to be defined.
 - **Host product:** defines, validates, and authorizes the commands available to its Child.
 - **Aurora:** potential future execution backend; not a dependency.
 
@@ -26,15 +26,13 @@ Goal → Contract → Implement → Validate → Document.
 
 Keep slices small, reuse proven 3.0 components selectively, and distinguish proposed behavior from working behavior.
 
-## Setup
+## Setup (Windows PowerShell)
 
-Requires Python 3.11+.
+Requires Python 3.14. Local development uses the installed Python directly; a virtual environment is not required.
 
-```bash
-python -m venv .venv
-# Activate the virtual environment using your shell
-python -m pip install -e ".[dev]"
-python -m pytest
+```powershell
+py -3.14 -m pip install -e ".[dev]"
+py -3.14 -m pytest
 ```
 
 No service or model is required to run the initial smoke test.
