@@ -51,3 +51,12 @@ LangGraph uses an in-memory checkpointer, not durable storage. State does **not*
 Both reference adapters optionally accept a SQLite file path and recover conversation answers after the adapter is recreated. The same parameterized tests cover resuming guidance, correcting an earlier target (clearing downstream selections), and preserving separate session IDs. The custom implementation persists JSON state; LangGraph uses `SqliteSaver` from `langgraph-checkpoint-sqlite`.
 
 The recovered state is validated against the existing product-owned guidance contract before accepting new answers. CI passed the recovery suite on Python 3.14. SQLite is a **local experiment**, not an approved production storage choice. The tests do not simulate a crashed OS process, concurrent writers, genuine LangGraph interrupts, real LLM interaction, or network disconnection. No framework selection is finalized.
+
+
+## Goal 1.4 — Adaptive decision routing
+
+`AdaptiveGuide` coordinates the existing custom Python or LangGraph guidance adapters. The LLM returns a constrained route: continue, correct, switch objectives, or clarify. Product-provided definitions remain authoritative for valid objectives, input keys, and selectable target IDs. Earlier answers are retained on objective changes only if compatible with the new product requirements and revalidated. Switching back to an abandoned objective starts a fresh revision.
+
+Verified by shared, parameterized tests for both backends, including valid continuations, corrections, product objective changes, ambiguous/unsupported model output, and separate client sessions.
+
+**Current limitations:** The routing model is fake in CI; no live LLM/product integration was tested. The adaptive coordinator's objective bindings and revisions are kept in memory and are not durable across process restarts. Existing stateful adapter persistence tests remain in place, but do not establish persistence of the new coordinator. No product operation, automatic repair, knowledge retrieval, or publication is implemented. This remains isolated feature work pending broader validation.
