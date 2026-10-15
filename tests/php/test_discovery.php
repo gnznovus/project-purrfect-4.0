@@ -2,8 +2,7 @@
 /** WordPress shim: test inventory behavior without WordPress or an HTTP server. */
 define('ABSPATH', __DIR__ . '/');
 function get_option($name, $fallback) {
-    return ['layout/main.php', 'inactive-but-not-listed.php'] === $GLOBALS['active_plugins']
-        ? $GLOBALS['active_plugins'] : $fallback;
+    return $GLOBALS['active_plugins'];
 }
 function is_multisite() { return $GLOBALS['multisite']; }
 function get_site_option($name, $fallback) {
