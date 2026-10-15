@@ -95,3 +95,20 @@ Use `docker compose -f wordpress/lab/compose.yaml down` to stop containers. Do *
 The `clock` container aligns wakeups to minute boundaries; checks choose their own intervals and can be marked dirty. Normal WordPress WP-Cron is disabled inside the lab. Outside this lab, the plugin provides WP-Cron as a traffic-dependent fallback; a production-quality always-on clock requires a reliable external runner. This is **not** real-time immediate triggering: an activation marks the registry dirty and the next clock tick handles it.
 
 **Validation distinction:** CI verifies PHP syntax, simulated WordPress heartbeat behaviors, and Python tests. The opt-in Docker acceptance test needs a machine with Docker; it has not been run by this assistant. No LLM service or cross-process RPC has been wired, and retrieval uses deterministic mock knowledge rather than vector RAG. This branch must not be called production-complete.
+
+
+## Goal 1.6 — WordPress GUI ↔ local Python POC
+
+**Local-only, not production authentication/deployment.** Reuses WordPress on port 8084, active mock product registry, and Purr Child. The WordPress admin menu **Purr Child Lab** provides a minimal chat; admin-ajax.php validates the logged-in administrator's capability and nonce before WordPress sends JSON to the internal `purra:8765/v1/chat` Python container. No Python port is published to the host or browser. Browser text is rendered as text, never HTML.
+
+From the repository root (after switching to `feat/purr-local-chat-1-6`):
+```powershell
+docker compose -f wordpress/lab/compose.yaml up -d --build
+docker compose -f wordpress/lab/compose.yaml ps
+```
+Visit http://localhost:8084/wp-admin/ and sign in using your existing **lab** administrator account (do not rerun WordPress core install). Open **Purr Child Lab** from the left admin menu. Try “I can't edit my page”: Purra should ask which registered product or WordPress area, then render clickable options. Choose Mock Layout to retrieve mock knowledge. Ask “login password” for general WP basics; ask about an unsupported area to see clarification. The two mock product plugins must be active and the registry heartbeat must have refreshed.
+
+Communication passes through real HTTP and JSON (WordPress → Python container); product identification is deliberately **deterministic and basic**, not live LLM reasoning. `src/purrfect/local_api.py` holds ephemeral Python-side sessions in process memory; restart erases context. The browser session is generated anew per page load. This is not the final cross-site bridge, not real RAG, not complete 1.4 adaptive flow, and not independently authenticated at the Python service boundary. The backend's default HTTP binding is only appropriate inside this isolated Docker network. Do not expose port 8765 publicly. The discovery snapshot is currently forwarded on each request: final multi-tenant installation identity and authorization still need design.
+
+Test failures: `docker compose -f wordpress/lab/compose.yaml logs --tail=80 purra wp`.
+Stop without deleting database: `docker compose -f wordpress/lab/compose.yaml down`. No `down -v`.
