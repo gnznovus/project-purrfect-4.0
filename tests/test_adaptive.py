@@ -120,3 +120,19 @@ async def test_separate_clients(objectives, backend):
     assert (await guide.start("a", "Translate")).interaction.key == "post_url"
     assert (await guide.start("b", "Settings")).interaction.key == "topic"
     assert guide.current == {"a": "translate", "b": "settings"}
+
+
+@pytest.mark.asyncio
+async def test_switching_back_creates_fresh_revision(objectives, backend):
+    guide = AdaptiveGuide(ScriptedModel(
+        '{"objective_id":"translate"}',
+        '{"kind":"continue","key":"post_url","value":"https://example.org/old"}',
+        '{"kind":"switch","objective_id":"settings"}',
+        '{"kind":"switch","objective_id":"translate"}',
+    ), objectives, backend)
+    await guide.start("a", "Translate")
+    await guide.message("a", "Old post")
+    assert (await guide.message("a", "Settings instead")).interaction.key == "topic"
+    restarted = await guide.message("a", "Back to translation")
+    assert restarted.interaction.key == "post_url"
+    assert restarted.resolved == {}
