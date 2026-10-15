@@ -128,3 +128,13 @@ async def test_no_match_cannot_fabricate_answer():
     response = await guide.answer("unicorn rainbow laser")
     assert response.response.status == "clarification"
     assert not response.evidence
+
+
+def test_interactive_choice_scopes_to_selected_active_product_only():
+    knowledge = SiteKnowledge(discover(inventory()).products, EVERYDAY_WORDPRESS)
+    guide = ScopeGuide(FakeModel({"scope": "clarify", "product_ids": []}), knowledge)
+    assert guide.choose("edit template layout", "layout").evidence[0].product_id == "layout"
+    assert guide.choose("edit template layout", "theme").response.status == "clarification"
+    assert guide.choose("edit a page", "wordpress").evidence[0].product_id is None
+    assert guide.choose("edit a page", "unknown-product").response.status == "needs_input"
+    assert guide.choose("edit a page", "other").response.status == "unsupported"
