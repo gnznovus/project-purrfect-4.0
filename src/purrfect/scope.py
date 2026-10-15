@@ -71,6 +71,33 @@ class ScopeGuide:
             "\n\n".join(item.text for item in evidence), "grounded",
         ), evidence)
 
+    def choose(self, message: str, choice: str) -> ScopeAnswer:
+        """Consume an explicit selection from the offered scope choices."""
+        if not message.strip():
+            raise ValueError("Request cannot be empty")
+        if choice == "other":
+            return ScopeAnswer("unsupported", GuidanceResponse(
+                "That is outside my registered-product and everyday WordPress support.",
+                "unsupported",
+            ))
+        if choice == "wordpress":
+            scope, evidence = "wordpress", self.knowledge.search(message, general_wp=True)
+        elif choice in self.knowledge.products:
+            scope, evidence = "product", self.knowledge.search(
+                message, product_ids=(choice,),
+            )
+        else:
+            return self._clarify(tuple(self.knowledge.products))
+        if not evidence:
+            return ScopeAnswer(scope, GuidanceResponse(
+                "I don't have verified guidance for that issue yet. "
+                "Which feature are you trying to use?",
+                "clarification",
+            ))
+        return ScopeAnswer(scope, GuidanceResponse(
+            "\\n\\n".join(item.text for item in evidence), "grounded",
+        ), evidence)
+
     @staticmethod
     def _clarify(ids: tuple[str, ...]) -> ScopeAnswer:
         options = tuple([Option(pid, pid) for pid in ids] + [
