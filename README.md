@@ -44,3 +44,10 @@ Purra's output does not authorize or run commands. Developer setup/test commands
 Two isolated adapters (`CustomConversation` and `LangGraphConversation`) use the exact same pure domain transition function in `stateful.py`. Parameterized tests compare ordered multi-turn input, target corrections, session isolation, and rejection of invalid answers. Correcting an earlier answer invalidates downstream selections.
 
 LangGraph uses an in-memory checkpointer, not durable storage. State does **not** survive a process restart. This experiment does not test real LLM decisions, interruption/resume through external IO, performance, or production persistence. LangGraph is installed as a **development-only** dependency while we evaluate it. No production adoption decision has been made.
+
+
+### Recovery comparison (experimental)
+
+Both reference adapters optionally accept a SQLite file path and recover conversation answers after the adapter is recreated. The same parameterized tests cover resuming guidance, correcting an earlier target (clearing downstream selections), and preserving separate session IDs. The custom implementation persists JSON state; LangGraph uses `SqliteSaver` from `langgraph-checkpoint-sqlite`.
+
+The recovered state is validated against the existing product-owned guidance contract before accepting new answers. CI passed the recovery suite on Python 3.14. SQLite is a **local experiment**, not an approved production storage choice. The tests do not simulate a crashed OS process, concurrent writers, genuine LangGraph interrupts, real LLM interaction, or network disconnection. No framework selection is finalized.
