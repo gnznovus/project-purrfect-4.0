@@ -11,6 +11,7 @@ defined('ABSPATH') || exit;
 require_once __DIR__ . '/src/discovery.php';
 require_once __DIR__ . '/src/heartbeat.php';
 require_once __DIR__ . '/src/runner.php';
+require_once __DIR__ . '/src/chat.php';
 
 /**
  * Products advertise a signal using the purrfect/product_signals filter.
