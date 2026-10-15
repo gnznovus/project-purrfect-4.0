@@ -15,7 +15,13 @@ COMPOSE = Path(__file__).with_name("compose.yaml")
 def wp(*args: str) -> str:
     command = ["docker", "compose", "-f", str(COMPOSE), "run", "--rm", "-T",
                "cli", "wp", *args]
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    if result.returncode:
+        raise RuntimeError(
+            f"WP-CLI failed (exit {result.returncode}): {' '.join(args)}\\n"
+            f"STDOUT:\\n{result.stdout.strip()}\\n"
+            f"STDERR:\\n{result.stderr.strip()}"
+        )
     return result.stdout.strip()
 
 
