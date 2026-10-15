@@ -1,10 +1,14 @@
 """Local-only HTTP POC. Framework-independent knowledge and scope contracts."""
 import json
+import os
+import asyncio
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 from urllib.parse import urlparse
 
+from purrfect.brain_scope import select_scope
+from purrfect.ollama import OllamaModel
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
@@ -14,6 +18,7 @@ from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
 class LocalState:
     sessions: dict = field(default_factory=dict)
     mutex: Lock = field(default_factory=Lock)
+    model: object | None = None
 
 
 def _reply(response: GuidanceResponse, scope: str, sources=()):
@@ -73,6 +78,21 @@ def respond(payload: dict, state: LocalState) -> dict:
             if not message.strip():
                 raise ValueError("Message required")
             state.sessions[session_id] = message
+            if state.model is not None:
+                try:
+                    decision = asyncio.run(select_scope(state.model, message, knowledge))
+                except Exception:
+                    # Model availability must not block verified local guidance.
+                    decision = None
+                if decision is not None:
+                    answer = _choose(message, decision, knowledge)
+                    if answer["status"] in ("grounded", "unsupported"):
+                        answer["routing"] = "brain"
+                        return answer
+                # Uncertainty, unverified matches and backend errors all clarify.
+                answer = _clarify(knowledge)
+                answer["routing"] = "brain-clarify"
+                return answer
             words = set(message.lower().split())
             hits = [p.id for p in knowledge.products.values()
                     if words & (set(p.id.replace("-", " ").lower().split()) - {"mock", "product", "plugin"})]
@@ -92,7 +112,15 @@ def respond(payload: dict, state: LocalState) -> dict:
 
 
 def serve(host: str = "0.0.0.0", port: int = 8765):
-    state = LocalState()
+    mode = os.environ.get("PURRA_BRAIN_MODE", "deterministic").lower()
+    if mode not in ("deterministic", "ollama"):
+        raise ValueError("Invalid PURRA_BRAIN_MODE")
+    model = OllamaModel(
+        model=os.environ.get("PURRA_OLLAMA_MODEL", "llama3.2:3b"),
+        base_url=os.environ.get("PURRA_OLLAMA_URL", "http://ollama:11434"),
+        timeout=5.0,
+    ) if mode == "ollama" else None
+    state = LocalState(model=model)
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
