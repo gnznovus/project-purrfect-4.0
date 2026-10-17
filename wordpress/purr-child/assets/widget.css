@@ -17,3 +17,7 @@
 #purr-child-widget .pc-bubble .pc-actions{padding:9px 0 0;display:flex;flex-wrap:wrap;gap:6px}
 #purr-child-widget .pc-bubble .pc-actions button{font-size:12px;line-height:1.35;white-space:normal;text-align:left}
 #purr-child-widget .pc-bubble .pc-actions button:disabled{opacity:.55;cursor:default}
+
+#purr-child-widget .pc-head-actions{display:flex;align-items:center;gap:9px}
+#purr-child-widget .pc-new-chat{display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid #ffffff80;border-radius:5px;color:white;width:28px;height:28px;font-size:19px}
+#purr-child-widget .pc-new-chat:hover,#purr-child-widget .pc-new-chat:focus-visible{background:#ffffff25}
