@@ -43,6 +43,25 @@ $GLOBALS['signals'] = [
 $found = purr_child_discover();
 check(count($found['active']) === 5, 'Must inventory regular and network plugins and both themes');
 check(count($found['signals']) === 2, 'Inactive product must not register');
+// The 1.8 product-owned procedure field is optional and must survive PHP discovery.
+$GLOBALS['signals'][] = [
+    'kind' => 'plugin', 'key' => 'layout/main.php', 'product_id' => 'translation',
+    'version' => '1.0', 'contract' => 1, 'capabilities' => ['translate'],
+    'knowledge' => [],
+    'troubleshooting' => [[
+        'id' => 'missing-panel', 'title' => 'Missing panel',
+        'steps' => [['id' => 'check', 'instruction' => 'Check active plugin', 'evidence_id' => 'source']],
+    ]],
+];
+$with_troubleshooting = purr_child_discover();
+check(count($with_troubleshooting['signals']) === 3, 'Active 1.8 product must register');
+check(isset($with_troubleshooting['signals'][2]['troubleshooting']), 'Preserve troubleshooting metadata');
+$GLOBALS['signals'][] = [
+    'kind' => 'plugin', 'key' => 'layout/main.php', 'product_id' => 'unexpected',
+    'version' => '1.0', 'contract' => 1, 'capabilities' => [],
+    'knowledge' => [], 'unknown_field' => true,
+];
+check(count(purr_child_discover()['signals']) === 3, 'Unrecognized fields remain rejected');
 $GLOBALS['active_plugins'] = ['other/main.php'];
 $found = purr_child_discover();
 check(count($found['signals']) === 1, 'Deactivated plugin must disappear');
