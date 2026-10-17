@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 
-from purrfect.knowledge import Evidence, RegisteredProduct
+from purrfect.knowledge import (Evidence, RegisteredProduct,
+                                TroubleshootingProcedure, TroubleshootingStep)
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,9 +35,12 @@ def discover(snapshot: dict) -> DiscoveryResult:
     products, rejected, seen = [], [], set()
     for signal in signals:
         try:
-            if not isinstance(signal, dict) or set(signal) != {
+            if not isinstance(signal, dict) or not {
                 "kind", "key", "product_id", "version", "contract",
                 "capabilities", "knowledge",
+            } <= set(signal) or set(signal) - {
+                "kind", "key", "product_id", "version", "contract",
+                "capabilities", "knowledge", "troubleshooting",
             }:
                 raise ValueError("Malformed signal")
             kind, key = signal["kind"], signal["key"]
@@ -65,7 +69,21 @@ def discover(snapshot: dict) -> DiscoveryResult:
                 ))
             if len({item.id for item in evidence}) != len(evidence):
                 raise ValueError("Duplicate evidence IDs")
-            product = RegisteredProduct(pid, version, kind, tuple(capabilities), tuple(evidence))
+            procedures_raw = signal.get("troubleshooting", [])
+            if not isinstance(procedures_raw, list):
+                raise ValueError("Invalid troubleshooting declaration")
+            procedures = []
+            for entry in procedures_raw:
+                if not isinstance(entry, dict) or set(entry) != {"id", "title", "steps"} or not isinstance(entry["steps"], list):
+                    raise ValueError("Invalid troubleshooting procedure")
+                steps = []
+                for step in entry["steps"]:
+                    if not isinstance(step, dict) or set(step) != {"id", "instruction", "evidence_id"}:
+                        raise ValueError("Invalid troubleshooting step")
+                    steps.append(TroubleshootingStep(step["id"], step["instruction"], step["evidence_id"]))
+                procedures.append(TroubleshootingProcedure(entry["id"], entry["title"], tuple(steps)))
+            product = RegisteredProduct(pid, version, kind, tuple(capabilities),
+                                        tuple(evidence), tuple(procedures))
             products.append(product)
             seen.add(pid)
         except (TypeError, ValueError, KeyError) as exc:
