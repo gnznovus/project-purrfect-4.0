@@ -16,6 +16,9 @@ from purrfect.conversation_intent import heuristic, classify_move
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
+from purrfect.sophira_bridge import effective_knowledge, sync_request
+from purrfect.sophira import LocalSophiraClient
+from purrfect.sophira_storage import DurableSophira
 
 
 @dataclass
@@ -24,6 +27,7 @@ class LocalState:
     workflows: dict = field(default_factory=dict)
     mutex: Lock = field(default_factory=Lock)
     model: object | None = None
+    sophira: object | None = None
 
 
 def _reply(response: GuidanceResponse, scope: str, sources=()):
@@ -113,7 +117,7 @@ def _clarify(knowledge: SiteKnowledge):
 
 
 def respond(payload: dict, state: LocalState) -> dict:
-    if not isinstance(payload, dict) or not {"session_id", "message", "selection", "inventory"} <= set(payload) or set(payload) - {"session_id", "message", "selection", "inventory", "context"}:
+    if not isinstance(payload, dict) or not {"session_id", "message", "selection", "inventory"} <= set(payload) or set(payload) - {"session_id", "message", "selection", "inventory", "context", "knowledge_leases"}:
         raise ValueError("Invalid request")
     session_id, message, selection = payload["session_id"], payload["message"], payload["selection"]
     if not isinstance(session_id, str) or not (1 <= len(session_id) <= 128):
@@ -125,7 +129,7 @@ def respond(payload: dict, state: LocalState) -> dict:
     context = payload.get("context", {})
     snapshot = payload["inventory"]
     result = discover(snapshot)
-    knowledge = SiteKnowledge(result.products, EVERYDAY_WORDPRESS)
+    knowledge = effective_knowledge(SiteKnowledge(result.products, EVERYDAY_WORDPRESS), payload.get("knowledge_leases", []))
     if not isinstance(context, dict):
         raise ValueError("Invalid browser context")
     restored = Conversation.restore({k: v for k, v in context.items()
@@ -385,11 +389,14 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
         base_url=os.environ.get("PURRA_OLLAMA_URL", "http://ollama:11434"),
         timeout=20.0,
     ) if mode == "ollama" else None
-    state = LocalState(model=model)
+    sophira_path = os.environ.get("SOPHIRA_DB_PATH")
+    sophira = DurableSophira(sophira_path) if sophira_path else None
+    state = LocalState(model=model, sophira=sophira)
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
-            if urlparse(self.path).path != "/v1/chat":
+            path = urlparse(self.path).path
+            if path not in ("/v1/chat", "/v1/knowledge/sync"):
                 self.send_error(404)
                 return
             if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
@@ -400,7 +407,12 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
                 if not 0 < count <= 65536:
                     raise ValueError("Invalid body length")
                 payload = json.loads(self.rfile.read(count))
-                output = respond(payload, state)
+                if path == "/v1/knowledge/sync":
+                    if state.sophira is None:
+                        raise ValueError("Sophira not configured")
+                    output = sync_request(LocalSophiraClient(state.sophira), payload)
+                else:
+                    output = respond(payload, state)
                 code = 200
             except (ValueError, TypeError, KeyError) as error:
                 output, code = {"error": str(error)}, 400
