@@ -93,13 +93,17 @@ def respond(payload: dict, state: LocalState) -> dict:
                 return _reply(GuidanceResponse("Hi! I'm here if you need help with WordPress or your registered products.", "grounded"), "conversation")
             if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
                 return _reply(GuidanceResponse("Of course! What would you like help with next?" if "ask" in lowered else "You're welcome! I'm here if you need anything else.", "grounded"), "conversation")
-            state.sessions[session_id] = message
+            references_prior = bool(prior_question and re.search(
+                r"\\b(it|that|those|previous|again|step|meant|instead)\\b", message.lower()
+            ))
+            topic = prior_question if references_prior else message
+            state.sessions[session_id] = topic
             if state.model is not None:
                 try:
                     # Preserve conversational reference, but let the model reclassify
                     # from current installed product capabilities on every turn.
                     contextual = message
-                    if prior_question and re.search(r"\b(it|that|those|previous|again|step|meant|instead)\b", message.lower()):
+                    if references_prior:
                         contextual = f"Previous user question: {prior_question}\nCurrent user request: {message}"
                     decision = asyncio.run(select_scope(state.model, contextual, knowledge))
                 except Exception:
@@ -109,10 +113,10 @@ def respond(payload: dict, state: LocalState) -> dict:
                     answer["routing"] = "brain-unavailable"
                     return answer
                 if decision is not None:
-                    answer = _choose(message, decision, knowledge)
+                    answer = _choose(topic, decision, knowledge)
                     if answer["status"] in ("grounded", "unsupported"):
                         answer["routing"] = "brain"
-                        answer["context"] = {"last_question": message, "last_scope": decision}
+                        answer["context"] = {"last_question": topic, "last_scope": decision}
                         return answer
                 # Uncertainty, unverified matches and backend errors all clarify.
                 answer = _clarify(knowledge)
