@@ -137,48 +137,68 @@ def respond(payload: dict, state: LocalState) -> dict:
         if not message.strip():
             raise ValueError("Message required")
         lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
-        if lowered in ("hi", "hello", "hey", "hi purra", "hello purra"):
-            return finish(_reply(GuidanceResponse(
-                "Hi! I'm here if you need help with WordPress or your registered products.",
-                "grounded"), "conversation"), conversation)
-        if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
-            text = ("Of course! What would you like help with next?" if "ask" in lowered
-                    else "You're welcome! I'm here if you need anything else.")
-            return finish(_reply(GuidanceResponse(text, "grounded"), "conversation"), conversation)
-
-        # Conversational moves do not start new product retrievals.
-        move = heuristic(message)
-        if move is None and state.model is not None and not any(phrase in lowered for phrase in ("i meant", "instead", "switch to", "rather than")) and (
-            conversation.topic and (
-                len(lowered.split()) <= 7
-                or any(term in lowered for term in ("didnt", "didn't", "worked", "simpler", "previous", "meant"))
-            )
-        ):
+        # The model is the first gate for conversational language. Product
+        # evidence and interactive selections continue through fixed contracts.
+        greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
+        pleasantry = lowered in ("can i ask something else", "can i ask another question",
+                                 "thank you", "thanks")
+        fallback = heuristic(message)
+        correction_text = any(word in lowered for word in
+                              ("i meant", "instead", "switch to", "rather than"))
+        generic_help = lowered in ("help", "help me", "i need help", "i need some help",
+                                    "can you help me", "i need assistance", "please help")
+        # Avoid a second model call for full product questions; the existing
+        # scoped router handles them. Short ambiguous turns belong to dialogue.
+        conversational = (greeting or pleasantry or fallback is not None
+                          or (len(lowered.split()) <= 7 and not correction_text
+                              and not generic_help
+                              and (conversation.topic or len(lowered.split()) <= 3)))
+        move = None
+        if state.model is not None and conversational:
             try:
                 move = asyncio.run(classify_move(state.model, message, {
                     "has_topic": bool(conversation.topic),
-                    "has_scope": bool(conversation.scope),
+                    "has_guidance": bool(conversation.evidence_id),
+                    "scope": conversation.scope,
                     "outcome": conversation.outcome,
                 }))
             except Exception:
-                move = None
-        kind = move.kind if move else "new"
+                pass
+        # Invalid model output is not grounds to classify user feedback as
+        # unsupported. The static templates are deliberately a fallback.
+        if move is None or (move.kind in ("new", "clarify") and
+                           (greeting or pleasantry or fallback is not None)):
+            move = fallback
+        kind = move.kind if move is not None else "new"
+        def conversation_answer(default, status="grounded"):
+            wording = move.reply if move is not None and move.reply else default
+            return _reply(GuidanceResponse(wording, status), "conversation")
+        if greeting or pleasantry:
+            if kind in ("new", "clarify"):
+                kind = "social"
+            if kind == "social":
+                response = ("Hi! I'm here if you need help with WordPress or your registered products."
+                            if greeting else
+                            "Of course! What would you like help with?")
+                return finish(conversation_answer(response), conversation)
         if kind == "social":
-            return finish(_reply(GuidanceResponse(
-                "Of course! What would you like help with?", "grounded"),
-                "conversation"), conversation)
-        if conversation.topic and kind == "resolved":
-            answer = _reply(GuidanceResponse(
-                "Glad that worked! Let me know if you need help with anything else.",
-                "grounded"), "conversation")
-            return finish(answer, conversation.updated(topic=conversation.topic,
-                scope=conversation.scope, outcome="resolved", evidence_id=conversation.evidence_id))
-        if conversation.topic and kind == "unresolved":
-            answer = _reply(GuidanceResponse(
-                "What happened when you tried it? Did you see an error message, or did something different happen?",
-                "clarification"), "conversation")
-            return finish(answer, conversation.updated(topic=conversation.topic,
-                scope=conversation.scope, outcome="unresolved", evidence_id=conversation.evidence_id))
+            return finish(conversation_answer("Of course! What would you like help with?"),
+                          conversation)
+        if kind == "resolved":
+            if not conversation.evidence_id:
+                return finish(conversation_answer(
+                    "Glad to hear it! What were you working on?"), conversation)
+            return finish(conversation_answer(
+                "Glad that worked! Let me know if you need help with anything else."),
+                conversation.updated(topic=conversation.topic, scope=conversation.scope,
+                    outcome="resolved", evidence_id=conversation.evidence_id))
+        if kind == "unresolved":
+            response = ("What didn't work? Tell me what you were trying to do."
+                        if not conversation.evidence_id else
+                        "What happened when you tried it? Did you see an error message?")
+            return finish(conversation_answer(response, "clarification"),
+                conversation.updated(topic=conversation.topic, scope=conversation.scope,
+                    outcome="unresolved", evidence_id=conversation.evidence_id))
         if conversation.topic and kind in ("simplify", "followup"):
             docs = (knowledge.wordpress if conversation.scope == "wordpress" else
                     knowledge.products[conversation.scope].evidence
@@ -199,9 +219,11 @@ def respond(payload: dict, state: LocalState) -> dict:
             return finish(_reply(GuidanceResponse(response, "clarification"), "conversation"),
                 conversation.updated(topic=conversation.topic, scope=conversation.scope,
                     outcome=conversation.outcome, evidence_id=conversation.evidence_id))
-        if conversation.topic and kind == "clarify":
-            return finish(_clarify(knowledge), conversation.updated(topic=conversation.topic,
-                pending=True, scope=None))
+        if kind == "clarify" and conversation.topic and conversational:
+            return finish(conversation_answer(
+                "Could you tell me which part you mean?", "clarification"),
+                conversation.updated(topic=conversation.topic, scope=conversation.scope,
+                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
 
         # A general request for help has no product target yet. Ask instead
         # of allowing a small classifier to label it unrelated.
