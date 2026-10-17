@@ -2,6 +2,7 @@
 import json
 import os
 import asyncio
+import re
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
@@ -60,7 +61,7 @@ def _clarify(knowledge: SiteKnowledge):
 
 
 def respond(payload: dict, state: LocalState) -> dict:
-    if not isinstance(payload, dict) or set(payload) != {"session_id", "message", "selection", "inventory"}:
+    if not isinstance(payload, dict) or not {"session_id", "message", "selection", "inventory"} <= set(payload) or set(payload) - {"session_id", "message", "selection", "inventory", "context"}:
         raise ValueError("Invalid request")
     session_id, message, selection = payload["session_id"], payload["message"], payload["selection"]
     if not isinstance(session_id, str) or not (1 <= len(session_id) <= 128):
@@ -69,18 +70,38 @@ def respond(payload: dict, state: LocalState) -> dict:
         raise ValueError("Invalid message")
     if selection is not None and not isinstance(selection, str):
         raise ValueError("Invalid selection")
+    context = payload.get("context", {})
+    if not isinstance(context, dict) or set(context) - {"last_question", "last_scope"}:
+        raise ValueError("Invalid conversation context")
+    prior_question = context.get("last_question", "")
+    prior_scope = context.get("last_scope")
+    if not isinstance(prior_question, str) or len(prior_question) > 2000 or (prior_scope is not None and not isinstance(prior_scope, str)):
+        raise ValueError("Invalid conversation context")
     snapshot = payload["inventory"]
     result = discover(snapshot)
     knowledge = SiteKnowledge(result.products, EVERYDAY_WORDPRESS)
     # All state is transient in this POC. No cross-site credentials or public API.
     with state.mutex:
+        if session_id not in state.sessions and prior_question:
+            # Browser restore supplies only conversation text, never privileged product state.
+            state.sessions[session_id] = prior_question
         if selection is None:
             if not message.strip():
                 raise ValueError("Message required")
+            lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
+            if lowered in ("hi", "hello", "hey", "hi purra", "hello purra"):
+                return _reply(GuidanceResponse("Hi! I'm here if you need help with WordPress or your registered products.", "grounded"), "conversation")
+            if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
+                return _reply(GuidanceResponse("Of course! What would you like help with next?" if "ask" in lowered else "You're welcome! I'm here if you need anything else.", "grounded"), "conversation")
             state.sessions[session_id] = message
             if state.model is not None:
                 try:
-                    decision = asyncio.run(select_scope(state.model, message, knowledge))
+                    # Preserve conversational reference, but let the model reclassify
+                    # from current installed product capabilities on every turn.
+                    contextual = message
+                    if prior_question and re.search(r"\\b(it|that|those|previous|again|step|meant|instead)\\b", message.lower()):
+                        contextual = f"Previous user question: {prior_question}\\nCurrent user request: {message}"
+                    decision = asyncio.run(select_scope(state.model, contextual, knowledge))
                 except Exception:
                     # Do not disguise an unavailable Brain as a successful inference.
                     answer = _clarify(knowledge)
@@ -91,6 +112,7 @@ def respond(payload: dict, state: LocalState) -> dict:
                     answer = _choose(message, decision, knowledge)
                     if answer["status"] in ("grounded", "unsupported"):
                         answer["routing"] = "brain"
+                        answer["context"] = {"last_question": message, "last_scope": decision}
                         return answer
                 # Uncertainty, unverified matches and backend errors all clarify.
                 answer = _clarify(knowledge)
@@ -111,7 +133,10 @@ def respond(payload: dict, state: LocalState) -> dict:
         previous = state.sessions.get(session_id)
         if previous is None:
             return _reply(GuidanceResponse("The conversation expired. Please ask again.", "clarification"), "clarify")
-        return _choose(previous, selection, knowledge)
+        answer = _choose(previous, selection, knowledge)
+        if answer["status"] == "grounded":
+            answer["context"] = {"last_question": previous, "last_scope": selection}
+        return answer
 
 
 def serve(host: str = "0.0.0.0", port: int = 8765):
