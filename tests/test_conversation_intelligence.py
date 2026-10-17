@@ -53,7 +53,7 @@ def test_inactive_product_evidence_cannot_be_replayed():
     state = LocalState()
     original = guided(state)
     restored = request("conv", "Can you explain that more simply?",
-                       {"active": [], "signals": []})
+                       registry={"active": [], "signals": []})
     restored["context"] = original["context"]
     answer = respond(restored, LocalState())
     assert answer["sources"] == []
