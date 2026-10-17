@@ -183,3 +183,22 @@ Live local acceptance on the active Docker lab:
 6. Open a fresh tab; check that it does not inherit the current tab's ongoing intent.
 
 **Scope boundary:** This slice uses the existing `GuidanceResponse`/`Interaction` contracts and the local Brain router with a small explicit support-context state object. The experimental `CustomConversation` engine models objective field collection, not this freeform support classifier; its full checkpoint progression has *not* been wired into the live widget. SessionStorage is browser-session storage, with browser-specific duplicate-tab/session-restore behavior. This is a local POC pending browser acceptance, not a production identity or permanent persistence system.
+
+
+## Goal 1.7 Slice 3 — Conversational Intelligence POC
+
+The existing admin widget and avatar are unchanged. Local Purra now distinguishes short conversational feedback from new product support requests. Constrained conversational classification (`conversation_intent.py`) can choose a move, but **cannot write technical advice or invoke product actions**. Verified knowledge and the current active registry remain the only sources of product instructions.
+
+Recoverable conversation context now includes a bounded `outcome` (`open`, `unresolved`, `resolved`) and an `evidence_id` reference. They survive the browser session/refresh and a local Python process restart; evidence is checked against the **currently active** product when reused. A statement that guidance did not work produces a diagnostic question; success receives an acknowledgement. Undocumented previous-step follow-ups ask for clarification instead of inventing steps. Simpler explanations currently **repeat and identify the documented instruction** rather than rewriting it with potentially unsupported steps; richer grounded paraphrasing is not implemented yet.
+
+Acceptance in the existing local WordPress admin widget, after switching to `feat/purra-conversation-intelligence-1-7c` and restarting `purra`:
+1. Greet Purra; request Mock Layout or Mock Translation help and receive sourced guidance.
+2. Say `What about the previous step?`; verify Purra asks rather than inventing one.
+3. Say `That didn't work.`; verify a diagnostic question.
+4. Say `Thanks, it worked!`; verify resolution acknowledgement.
+5. Say `Can you explain that more simply?`; verify she quotes verified evidence only, or clarifies if no supported evidence exists.
+6. Correct the product (`No, I meant translation`); verify the new scope is registered.
+7. Refresh and restart the Python service; verify the current topic and resolution remain available.
+8. Ask something unsupported; verify no made-up instructions.
+
+Model inference quality and response wording still require local browser acceptance. Existing product/button guidance and UI are unchanged. This does **not** integrate the experimental full CustomConversation task checkpoint engine into the live support widget.
