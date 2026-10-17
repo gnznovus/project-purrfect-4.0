@@ -101,7 +101,7 @@ def test_first_step_success_stops_without_second_step():
 
 
 @pytest.mark.parametrize("mutation", [
-    lambda raw: raw.update(step_id="check-admin"),
+    lambda raw: raw.update(step_id="check-plugin"),
     lambda raw: raw["attempts"][0].update(step_id="check-admin"),
     lambda raw: raw["attempts"][0].update(evidence_id="fake"),
     lambda raw: raw["attempts"][0].update(result="worked"),
