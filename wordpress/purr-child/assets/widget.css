@@ -9,3 +9,11 @@
 #purr-child-widget .pc-line .pc-item{margin:0;flex:1;min-width:0}
 #purr-child-widget .pc-line-user{justify-content:flex-end}
 #purr-child-widget .pc-line-user .pc-item{flex:0 1 auto;max-width:calc(100% - 34px)}
+
+#purr-child-widget .pc-line .pc-bubble{flex:1;min-width:0;border-radius:10px;background:#f1f4f7;padding:9px}
+#purr-child-widget .pc-line-user .pc-bubble{flex:0 1 auto;max-width:calc(100% - 34px);background:#e3f0fc}
+#purr-child-widget .pc-bubble .pc-item{padding:0;margin:0;background:transparent;max-width:100%;white-space:pre-wrap}
+#purr-child-widget .pc-bubble .pc-item.pc-user{margin:0}
+#purr-child-widget .pc-bubble .pc-actions{padding:9px 0 0;display:flex;flex-wrap:wrap;gap:6px}
+#purr-child-widget .pc-bubble .pc-actions button{font-size:12px;line-height:1.35;white-space:normal;text-align:left}
+#purr-child-widget .pc-bubble .pc-actions button:disabled{opacity:.55;cursor:default}
