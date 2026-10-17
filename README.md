@@ -166,3 +166,20 @@ This branch displays Purra's illustration in the floating launcher, chat title, 
 **Artwork delivery step:** The PNG assets are supplied separately in `purra_avatar_assets.zip` (not included in the GitHub source commit). Extract the archive **at the repository root** so that `wordpress/purr-child/assets/purra-avatar.png` and `wordpress/purr-child/assets/aurora-avatar.png` exist. The files are optimized 512×512 transparent PNGs derived from the approved individual portraits. The Purr Child plugin directory is bind-mounted into the local WordPress container, so the images become available without rebuilding.
 
 Switch to `feat/purra-avatar-ui-1-7`, extract the assets, then refresh WordPress admin. Check the collapsed avatar, header, and Purra message avatars. No changes were made to Purra's HTTP or Brain contracts.
+
+
+## Goal 1.7 Slice 2 — Recoverable intent and choices
+
+The live `/v1/chat` service now keeps an explicit, versioned, bounded support conversation state: last grounded topic, selected scope, whether a validated choice is pending, and revision. The same state is returned as `context` and stored by the floating admin widget in per-tab `sessionStorage`. It survives WordPress navigation and refresh. After a Python process restart the browser can restore that limited support context.
+
+Interactive choice IDs remain server-defined; after a clarification, the user can select from the **currently registered** products, general WordPress, and out-of-scope. The server rejects selections with no pending question, rejects stale or inactive products, and does not accept browser context as proof that a product is active. A new free-text request replaces pending choices; corrections are freshly routed by the existing Brain against the current registry. No unsupported operations or knowledge edits were added.
+
+Live local acceptance on the active Docker lab:
+1. Open WordPress admin and Purra; ask an ambiguous question, then refresh and click one of the restored product buttons.
+2. Ask another unrelated question; ensure previous buttons do not silently select the old topic.
+3. Ask a product question, refresh or navigate across admin screens, then ask a contextual follow-up.
+4. Restart only the Python service with `docker compose -f wordpress/lab/compose.yaml restart purra`; confirm a pending choice is recoverable.
+5. Deactivate one mock product, wait for registry refresh, then verify that an old button for that product is refused.
+6. Open a fresh tab; check that it does not inherit the current tab's ongoing intent.
+
+**Scope boundary:** This slice uses the existing `GuidanceResponse`/`Interaction` contracts and the local Brain router with a small explicit support-context state object. The experimental `CustomConversation` engine models objective field collection, not this freeform support classifier; its full checkpoint progression has *not* been wired into the live widget. SessionStorage is browser-session storage, with browser-specific duplicate-tab/session-restore behavior. This is a local POC pending browser acceptance, not a production identity or permanent persistence system.
