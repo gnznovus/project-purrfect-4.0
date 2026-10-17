@@ -66,7 +66,8 @@ def test_wordpress_unrelated_question_does_not_dump_faq():
     result = respond(request("unknown-test", "WordPress quantum unicorn"), state)
     assert result["status"] == "needs_input"
     result = respond(request("unknown-test", "", "wordpress"), state)
-    assert result["status"] == "clarification"
+    assert result["status"] == "needs_input"
+    assert result["interaction"]["key"] == "support_intent"
     assert result["sources"] == []
 
 
