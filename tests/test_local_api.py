@@ -261,3 +261,29 @@ def test_17b_generic_help_offers_scope_choices_without_calling_model():
     guide = respond(request("help-session", "", "guide:mock-layout:0"), state)
     assert guide["status"] == "grounded"
     assert [x["id"] for x in guide["sources"]] == ["a"]
+
+
+def test_17c_three_step_flow_and_correct_pending_scope():
+    state = LocalState()
+    scope = respond(request("flow", "I need some help"), state)
+    assert scope["interaction"]["key"] == "support_scope"
+    topics = respond(request("flow", "", "mock-layout"), state)
+    assert topics["interaction"]["key"] == "support_intent"
+    assert topics["context"]["last_scope"] == "mock-layout"
+    # A forged topic for a different scope cannot be accepted.
+    wrong = respond(request("flow", "", "guide:wordpress:0"), state)
+    assert wrong["sources"] == []
+    assert wrong["status"] == "needs_input"
+    guide = respond(request("flow", "", "guide:mock-layout:0"), state)
+    assert guide["status"] == "grounded"
+    assert guide["message"] == "Open the layout editor to edit blocks."
+    assert guide["context"]["pending"] is False
+
+
+def test_17c_new_session_cannot_inherit_previous_choices():
+    state = LocalState()
+    respond(request("old-session", "I need some help"), state)
+    respond(request("old-session", "", "mock-layout"), state)
+    fresh = respond(request("fresh-session", "", "guide:mock-layout:0"), state)
+    assert fresh["sources"] == []
+    assert fresh["status"] == "needs_input"
