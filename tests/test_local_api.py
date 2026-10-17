@@ -109,3 +109,37 @@ def test_unavailable_model_degrades_to_clarification():
     result = respond(request("brain-4", "help translate"), state)
     assert result["status"] == "needs_input"
     assert result["routing"] == "brain-unavailable"
+
+
+def test_17_greeting_and_conversational_request():
+    state = LocalState(model=ScriptedBrain('{"selection":"other"}'))
+    for question in ("Hi Purra!", "Can I ask something else?"):
+        response = respond(request("conversation", question), state)
+        assert response["scope"] == "conversation"
+        assert response["status"] == "grounded"
+        assert response["sources"] == []
+
+
+def test_17_restored_pending_selection_uses_current_registry():
+    state = LocalState(model=ScriptedBrain('{"selection":null}'))
+    pending = respond(request("old", "I cannot edit the page"), state)
+    assert pending["status"] == "needs_input"
+    new_state = LocalState()
+    restore = request("old", "", "mock-layout")
+    restore["context"] = {"last_question": "I cannot edit the page"}
+    answer = respond(restore, new_state)
+    assert answer["scope"] == "product"
+    assert answer["status"] == "grounded"
+    assert answer["context"]["last_scope"] == "mock-layout"
+    removed = request("old", "", "mock-layout", {"active": [], "signals": []})
+    removed["context"] = restore["context"]
+    assert respond(removed, LocalState())["status"] == "needs_input"
+
+
+def test_17_invalid_browser_context_rejected():
+    state = LocalState()
+    invalid = request("one", "test")
+    invalid["context"] = {"last_question": "x" * 2001}
+    import pytest
+    with pytest.raises(ValueError):
+        respond(invalid, state)
