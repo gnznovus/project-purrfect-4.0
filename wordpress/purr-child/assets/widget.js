@@ -7,7 +7,7 @@
   let saved;
   try { saved = JSON.parse(sessionStorage.getItem(storageKey) || '{}'); } catch { saved = {}; }
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
-  const session = typeof saved.session === 'string' && /^[\w-]{8,128}$/.test(saved.session)
+  let session = typeof saved.session === 'string' && /^[\w-]{8,128}$/.test(saved.session)
     ? saved.session : (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-session');
   const history = Array.isArray(saved.history) ? saved.history.slice(-60).filter(
     x => x && ['You','Purra','Source','Connection'].includes(x.role) && typeof x.text === 'string' && x.text.length < 4000) : [];
@@ -37,9 +37,15 @@
   const title = element('span', 'pc-title');
   title.append(avatar(), element('span', '', 'Purra'));
   head.append(title);
+  const controls = element('div', 'pc-head-actions');
+  const newChat = element('button', 'pc-new-chat', '✎');
+  newChat.type = 'button'; newChat.title = 'New Chat';
+  newChat.setAttribute('aria-label', 'New Chat');
+  controls.append(newChat);
   const close = element('button', 'pc-close', '×');
   close.type = 'button'; close.setAttribute('aria-label', 'Collapse Purra');
-  head.append(close);
+  controls.append(close);
+  head.append(controls);
   const log = element('div', 'pc-log');
   log.setAttribute('role', 'log');
   const status = element('div', 'pc-status');
@@ -66,7 +72,7 @@
     if (entry.role === 'Purra') line.append(avatar());
     const bubble = element('div', 'pc-bubble');
     bubble.append(element('p', 'pc-item' + (entry.role === 'You' ? ' pc-user' : ''), entry.text));
-    if (entry.options && Array.isArray(entry.options)) {
+    if (entry.options && Array.isArray(entry.options) && !entry.consumed) {
       const choices = element('div', 'pc-actions');
       for (const option of entry.options) {
         if (typeof option.id !== 'string' || typeof option.label !== 'string') continue;
@@ -110,6 +116,18 @@
   redraw();
   fab.addEventListener('click', () => { opened = true; greeted = true; redraw(); save(); input.focus(); });
   close.addEventListener('click', () => { opened = false; redraw(); save(); });
+  newChat.addEventListener('click', () => {
+    if (busy) return;
+    session = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-new-chat';
+    history.length = 0;
+    context = {};
+    pending = null;
+    history.push({ role: 'Purra', text: "Hi! I'm here if you need help." });
+    input.value = '';
+    renderAll();
+    save();
+    input.focus();
+  });
   async function submit(message, selection = null) {
     if (busy) return;
     busy = true; send.disabled = true;
@@ -143,6 +161,12 @@
         remember('Source', data.sources.map(x => x.source).filter(Boolean).join(', '));
       }
       if (data.context && typeof data.context === 'object' && !Array.isArray(data.context)) context = data.context;
+      // The accepted answer supersedes the previous interaction. Keep its
+      // question bubble, but remove the used buttons from that old message.
+      if (selection !== null && previousPending) {
+        const earlier = history.find(entry => entry.turn === previousPending.turn);
+        if (earlier) { earlier.consumed = true; delete earlier.options; }
+      }
       renderAll(); save();
     } catch (error) {
       remember('Connection', error.message);
