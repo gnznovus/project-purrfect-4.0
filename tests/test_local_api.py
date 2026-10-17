@@ -163,3 +163,14 @@ def test_17_followup_uses_original_topic_and_current_inventory():
     assert next_result["status"] == "grounded"
     assert next_result["context"]["last_question"] == first["context"]["last_question"]
     assert "Previous user question:" in brain.questions[1]
+
+
+def test_17_json_object_empty_context_first_message():
+    import json
+    payload = request("new-session", "Hi Purra!")
+    payload["context"] = {}
+    actual = json.loads(json.dumps(payload))
+    assert isinstance(actual["context"], dict)
+    response = respond(actual, LocalState())
+    assert response["scope"] == "conversation"
+    assert response["status"] == "grounded"
