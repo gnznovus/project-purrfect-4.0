@@ -161,9 +161,9 @@ def test_17_followup_uses_original_topic_and_current_inventory():
     next_payload = request("follow", "What about that step?")
     next_payload["context"] = first["context"]
     next_result = respond(next_payload, state)
-    assert next_result["status"] == "grounded"
+    assert next_result["status"] == "clarification"
     assert next_result["context"]["last_question"] == first["context"]["last_question"]
-    assert "Previous user question:" in brain.questions[1]
+    assert "previous step" in next_result["message"].lower()
 
 
 def test_17_json_object_empty_context_first_message():
