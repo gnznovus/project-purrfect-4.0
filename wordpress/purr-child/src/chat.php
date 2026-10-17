@@ -35,8 +35,9 @@ add_action('wp_ajax_purr_child_chat', static function (): void {
     $session = isset($_POST['session']) && is_string($_POST['session'])
         ? sanitize_text_field(wp_unslash($_POST['session'])) : '';
     $selection = isset($_POST['selection']) && is_string($_POST['selection'])
-        ? sanitize_key(wp_unslash($_POST['selection'])) : null;
-    if (strlen($message) > 2000 || strlen($session) > 128 || $session === '') {
+        ? sanitize_text_field(wp_unslash($_POST['selection'])) : null;
+    if (strlen($message) > 2000 || strlen($session) > 128 || $session === ''
+        || ($selection !== null && (strlen($selection) > 160 || !preg_match('/\\A[a-zA-Z0-9:_-]+\\z/', $selection)))) {
         wp_send_json_error('Invalid request', 400);
     }
     $inventory = get_option('purr_child_registry', []);
@@ -82,7 +83,7 @@ add_action('admin_footer', static function (): void {
 add_action('admin_enqueue_scripts', static function (): void {
     if (!current_user_can('manage_options')) return;
     wp_enqueue_style('purr-child-widget', plugins_url('../assets/widget.css', __FILE__), [], '0.1.2');
-    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.3', true);
+    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.4', true);
     wp_add_inline_script('purr-child-widget', 'window.purrChildWidget = ' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('purr_child_lab'),
