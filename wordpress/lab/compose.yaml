@@ -13,11 +13,13 @@ services:
     command: ["python", "-m", "purrfect.local_api"]
     environment:
       PYTHONPATH: /workspace/src
+      SOPHIRA_DB_PATH: /var/lib/sophira/knowledge.db
       PURRA_BRAIN_MODE: ${PURRA_BRAIN_MODE:-deterministic}
       PURRA_OLLAMA_URL: http://ollama:11434
       PURRA_OLLAMA_MODEL: ${PURRA_OLLAMA_MODEL:-llama3.2:3b}
     volumes:
       - ../..:/workspace:ro
+      - sophira_data:/var/lib/sophira
     expose:
       - "8765"
 
@@ -97,3 +99,4 @@ volumes:
   ollama_models:
   wp_db:
   wp_data:
+  sophira_data:
