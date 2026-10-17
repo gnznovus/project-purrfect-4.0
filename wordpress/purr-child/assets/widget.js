@@ -151,7 +151,10 @@
       renderAll(); save();
     }
     finally { clearInterval(tick); status.hidden = true; status.textContent = '';
-      busy = false; send.disabled = false; }
+      busy = false; send.disabled = false;
+      // Render enabled choices after the request has settled.
+      renderAll();
+    }
   }
   form.addEventListener('submit', event => {
     event.preventDefault();
