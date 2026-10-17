@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from purrfect.brain_scope import select_scope
 from purrfect.ollama import OllamaModel
 from purrfect.conversation import Conversation
+from purrfect.conversation_intent import heuristic, classify_move
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
@@ -92,6 +93,12 @@ def respond(payload: dict, state: LocalState) -> dict:
         # It cannot authorize product access: _choose always checks fresh registry.
         conversation = restored if previous is None else previous
         def finish(answer, next_state):
+            # A grounded answer can carry a reference, but only currently active
+            # registered evidence is allowed to be replayed later.
+            if answer.get("sources"):
+                item = answer["sources"][0]
+                next_state = next_state.updated(topic=next_state.topic, scope=next_state.scope,
+                    pending=next_state.pending, evidence_id=item["id"])
             state.sessions[session_id] = next_state
             answer["context"] = next_state.export()
             return answer
@@ -137,6 +144,59 @@ def respond(payload: dict, state: LocalState) -> dict:
             text = ("Of course! What would you like help with next?" if "ask" in lowered
                     else "You're welcome! I'm here if you need anything else.")
             return finish(_reply(GuidanceResponse(text, "grounded"), "conversation"), conversation)
+
+        # Conversational moves do not start new product retrievals.
+        move = heuristic(message)
+        if move is None and state.model is not None and (
+            conversation.topic and (
+                len(lowered.split()) <= 7
+                or any(term in lowered for term in ("didnt", "didn't", "worked", "simpler", "previous", "meant"))
+            )
+        ):
+            try:
+                move = asyncio.run(classify_move(state.model, message, {
+                    "has_topic": bool(conversation.topic),
+                    "has_scope": bool(conversation.scope),
+                    "outcome": conversation.outcome,
+                }))
+            except Exception:
+                move = None
+        kind = move.kind if move else "new"
+        if conversation.topic and kind == "resolved":
+            answer = _reply(GuidanceResponse(
+                "Glad that worked! Let me know if you need help with anything else.",
+                "grounded"), "conversation")
+            return finish(answer, conversation.updated(topic=conversation.topic,
+                scope=conversation.scope, outcome="resolved", evidence_id=conversation.evidence_id))
+        if conversation.topic and kind == "unresolved":
+            answer = _reply(GuidanceResponse(
+                "What happened when you tried it? Did you see an error message, or did something different happen?",
+                "clarification"), "conversation")
+            return finish(answer, conversation.updated(topic=conversation.topic,
+                scope=conversation.scope, outcome="unresolved", evidence_id=conversation.evidence_id))
+        if conversation.topic and kind in ("simplify", "followup"):
+            docs = (knowledge.wordpress if conversation.scope == "wordpress" else
+                    knowledge.products[conversation.scope].evidence
+                    if conversation.scope in knowledge.products else ())
+            evidence = next((item for item in docs if item.id == conversation.evidence_id), None)
+            if kind == "simplify" and evidence is not None:
+                answer = _reply(GuidanceResponse(
+                    "The documented instruction is: " + evidence.text,
+                    "grounded"), "wordpress" if conversation.scope == "wordpress" else "product",
+                    (evidence,))
+                return finish(answer, conversation.updated(topic=conversation.topic,
+                    scope=conversation.scope, evidence_id=evidence.id,
+                    outcome=conversation.outcome))
+            response = ("The registered guide doesn't specify a previous step. "
+                        "Which part would you like me to explain?"
+                        if kind == "followup" else
+                        "Which part of the documented instruction is unclear?")
+            return finish(_reply(GuidanceResponse(response, "clarification"), "conversation"),
+                conversation.updated(topic=conversation.topic, scope=conversation.scope,
+                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
+        if conversation.topic and kind == "clarify":
+            return finish(_clarify(knowledge), conversation.updated(topic=conversation.topic,
+                pending=True, scope=None))
 
         # A general request for help has no product target yet. Ask instead
         # of allowing a small classifier to label it unrelated.
