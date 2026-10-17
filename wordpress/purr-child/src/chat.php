@@ -18,7 +18,7 @@ function purr_child_render_chat(): void {
     echo '<div id="purr-options"></div>';
     echo '<p><input id="purr-question" style="width:78%" aria-label="Ask Purra" placeholder="Ask about a product or WordPress" /> ';
     echo '<button id="purr-send" class="button button-primary">Send</button></p></div></div>';
-    wp_enqueue_script('purr-child-chat', plugins_url('../assets/chat.js', __FILE__), [], '0.1.0', true);
+    wp_enqueue_script('purr-child-chat', plugins_url('../assets/chat.js', __FILE__), [], '0.1.1', true);
     wp_add_inline_script('purr-child-chat', 'window.purrChildLab = ' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('purr_child_lab'),
