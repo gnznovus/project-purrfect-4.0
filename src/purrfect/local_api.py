@@ -92,6 +92,17 @@ def _choose(question: str, selection: str, knowledge: SiteKnowledge):
     return _reply(GuidanceResponse("\n\n".join(e.text for e in results), "grounded", interaction), scope, results)
 
 
+def _is_generic_help(message: str) -> bool:
+    """An unspecified request for assistance needs a scope, never 'other'."""
+    normalized = re.sub(r"[^a-z0-9 ]", "", message.casefold())
+    normalized = " ".join(normalized.split())
+    return bool(re.fullmatch(
+        r"(?:i need (?:some )?help|help(?: me)?|"
+        r"can you help me|i need assistance|please help)"
+        r"(?: (?:here|please|with this))?", normalized
+    ))
+
+
 def _clarify(knowledge: SiteKnowledge):
     options = tuple([Option(p.id, p.id) for p in knowledge.products.values()]
                     + [Option("wordpress", "General WordPress"), Option("other", "Other")])
@@ -232,8 +243,7 @@ def respond(payload: dict, state: LocalState) -> dict:
         fallback = heuristic(message)
         correction_text = any(word in lowered for word in
                               ("i meant", "instead", "switch to", "rather than"))
-        generic_help = lowered in ("help", "help me", "i need help", "i need some help",
-                                    "can you help me", "i need assistance", "please help")
+        generic_help = _is_generic_help(message)
         # Avoid a second model call for full product questions; the existing
         # scoped router handles them. Short ambiguous turns belong to dialogue.
         conversational = (greeting or pleasantry or fallback is not None
@@ -319,8 +329,7 @@ def respond(payload: dict, state: LocalState) -> dict:
 
         # A general request for help has no product target yet. Ask instead
         # of allowing a small classifier to label it unrelated.
-        if lowered in ("help", "help me", "i need help", "i need some help",
-                       "can you help me", "i need assistance", "please help"):
+        if generic_help:
             candidate = conversation.updated(topic=message, scope=None, pending=True)
             return finish(_clarify(knowledge), candidate)
 
