@@ -104,5 +104,176 @@ function purr_child_register_heartbeat(array $components): array {
         'interval' => 300,
         'callback' => 'purr_child_refresh_registry',
     ];
+    $components['knowledge'] = [
+        'interval' => 21600,
+        'callback' => 'purr_child_sync_knowledge',
+    ];
     return $components;
+}
+
+/** Validate Sophira's canonical SHA-256 package independently in the Child. */
+function purr_child_knowledge_valid(array $package): bool {
+    if (array_keys($package) !== ['product_id', 'product_version', 'revision', 'contract_version', 'digest', 'items']
+        && count(array_diff(['product_id', 'product_version', 'revision', 'contract_version', 'digest', 'items'], array_keys($package))) > 0) {
+        return false;
+    }
+    if (!is_string($package['product_id']) || !is_string($package['product_version'])
+        || !is_int($package['revision']) || $package['revision'] < 1
+        || ($package['contract_version'] ?? null) !== 1
+        || !is_string($package['digest']) || !is_array($package['items'])) {
+        return false;
+    }
+    $items = $package['items'];
+    if (count($items) > 1000) {
+        return false;
+    }
+    $seen = [];
+    foreach ($items as $item) {
+        if (!is_array($item) || array_keys($item) !== ['id', 'content', 'source']
+            || !is_string($item['id']) || $item['id'] === ''
+            || !is_string($item['content']) || $item['content'] === ''
+            || !is_string($item['source']) || $item['source'] === ''
+            || isset($seen[$item['id']])) {
+            return false;
+        }
+        $seen[$item['id']] = true;
+    }
+    usort($items, static fn($a, $b) => strcmp($a['id'], $b['id']));
+    $triples = array_map(static fn($i) => [$i['id'], $i['content'], $i['source']], $items);
+    $canonical = json_encode([
+        $package['product_id'], $package['product_version'], $package['revision'],
+        $package['contract_version'], $triples,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return is_string($canonical) && hash_equals($package['digest'], hash('sha256', $canonical));
+}
+
+/** Apply an update privately, committing only a complete verified replacement. */
+function purr_child_knowledge_apply(array $current, array $update): array {
+    $pid = $update['product_id'] ?? null;
+    $version = $update['product_version'] ?? null;
+    if (!is_string($pid) || !is_string($version) || !isset($current['product_id'])
+        || $current['product_id'] !== $pid || $current['product_version'] !== $version) {
+        return [];
+    }
+    if (($update['type'] ?? null) === 'snapshot') {
+        $next = $update['payload'] ?? null;
+        if (!is_array($next) || $next['product_id'] !== $pid || $next['product_version'] !== $version
+            || !is_int($next['revision']) || $next['revision'] <= $current['revision']) {
+            return [];
+        }
+    } elseif (($update['type'] ?? null) === 'delta') {
+        if (($update['from_revision'] ?? null) !== $current['revision']
+            || !is_int($update['to_revision'] ?? null) || $update['to_revision'] <= $current['revision']
+            || !is_array($update['removed_ids'] ?? null) || !is_array($update['upserts'] ?? null)
+            || !is_string($update['target_digest'] ?? null)) {
+            return [];
+        }
+        $items = [];
+        foreach ($current['items'] as $item) {
+            $items[$item['id']] = $item;
+        }
+        foreach ($update['removed_ids'] as $id) {
+            if (!is_string($id) || !array_key_exists($id, $items)) {
+                return [];
+            }
+            unset($items[$id]);
+        }
+        foreach ($update['upserts'] as $item) {
+            if (!is_array($item) || !is_string($item['id'] ?? null)) {
+                return [];
+            }
+            $items[$item['id']] = $item;
+        }
+        $next = [
+            'product_id' => $pid, 'product_version' => $version,
+            'revision' => $update['to_revision'], 'contract_version' => 1,
+            'digest' => $update['target_digest'], 'items' => array_values($items),
+        ];
+    } else {
+        return [];
+    }
+    return purr_child_knowledge_valid($next) ? $next : [];
+}
+
+/** Existing site-owned heartbeat. Retry failures without deleting last-good leases. */
+function purr_child_sync_knowledge(): bool {
+    $registry = get_option('purr_child_registry', []);
+    if (!is_array($registry) || !is_array($registry['signals'] ?? null)) {
+        return false;
+    }
+    $stored = get_option('purr_child_knowledge_leases', []);
+    if (!is_array($stored)) {
+        $stored = [];
+    }
+    $products = [];
+    $active = [];
+    foreach ($registry['signals'] as $signal) {
+        if (!is_array($signal) || !is_string($signal['product_id'] ?? null)
+            || !is_string($signal['version'] ?? null)) {
+            continue;
+        }
+        $pid = $signal['product_id'];
+        $version = $signal['version'];
+        $active[$pid] = $version;
+        $lease = $stored[$pid] ?? null;
+        if (is_array($lease) && $lease['product_version'] === $version
+            && purr_child_knowledge_valid($lease)) {
+            $revision = $lease['revision'];
+        } else {
+            $revision = null;
+            unset($stored[$pid]);
+        }
+        $products[] = ['id' => $pid, 'version' => $version, 'revision' => $revision];
+    }
+    if (!$products) {
+        return true;
+    }
+    $response = wp_remote_post('http://purra:8765/v1/knowledge/sync', [
+        'timeout' => 20,
+        'headers' => ['Content-Type' => 'application/json'],
+        'body' => wp_json_encode(['products' => $products]),
+    ]);
+    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+        return false;
+    }
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if (!is_array($body) || ($body['contract_version'] ?? null) !== 1
+        || !is_array($body['updates'] ?? null)) {
+        return false;
+    }
+    $candidate = $stored;
+    foreach ($body['updates'] as $update) {
+        if (!is_array($update) || !is_string($update['product_id'] ?? null)) {
+            return false;
+        }
+        $pid = $update['product_id'];
+        $version = $active[$pid] ?? null;
+        if ($version === null || ($update['product_version'] ?? null) !== $version) {
+            return false;
+        }
+        $previous = $candidate[$pid] ?? null;
+        if (($update['type'] ?? null) === 'snapshot' && $previous === null) {
+            $previous = [
+                'product_id' => $pid, 'product_version' => $version,
+                'revision' => 0, 'items' => [],
+            ];
+        }
+        if (!is_array($previous)) {
+            return false;
+        }
+        $next = purr_child_knowledge_apply($previous, $update);
+        if (!$next) {
+            return false;
+        }
+        $candidate[$pid] = $next;
+    }
+    foreach ($candidate as $pid => $lease) {
+        if (!isset($active[$pid]) || $lease['product_version'] !== $active[$pid]) {
+            unset($candidate[$pid]);
+        }
+    }
+    if ($candidate !== $stored) {
+        update_option('purr_child_knowledge_leases', $candidate, false);
+    }
+    return true;
 }
