@@ -99,8 +99,8 @@ def respond(payload: dict, state: LocalState) -> dict:
                     # Preserve conversational reference, but let the model reclassify
                     # from current installed product capabilities on every turn.
                     contextual = message
-                    if prior_question and re.search(r"\\b(it|that|those|previous|again|step|meant|instead)\\b", message.lower()):
-                        contextual = f"Previous user question: {prior_question}\\nCurrent user request: {message}"
+                    if prior_question and re.search(r"\b(it|that|those|previous|again|step|meant|instead)\b", message.lower()):
+                        contextual = f"Previous user question: {prior_question}\nCurrent user request: {message}"
                     decision = asyncio.run(select_scope(state.model, contextual, knowledge))
                 except Exception:
                     # Do not disguise an unavailable Brain as a successful inference.
