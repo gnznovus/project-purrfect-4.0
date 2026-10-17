@@ -18,7 +18,16 @@ def heuristic(message: str) -> Move | None:
     normalized = " ".join(re.sub(r"[^a-z0-9 ]", "", message.lower()).split())
     if normalized in {"that didnt work", "it didnt work", "still doesnt work", "not working", "didnt work", "that does not work"}:
         return Move("unresolved")
-    if normalized in {"thanks it worked", "thank you it worked", "it worked", "that worked", "fixed now", "solved", "problem solved"}:
+    # Success confirmations have many informal spellings. Negated success is
+    # never a resolution, and must not be overridden by a mistaken model route.
+    resolution = re.search(
+        r"\\b(?:work(?:s|ed|ing)?|fixed|solved|resolved)\\s+(?:fine\\s+)?now\\b"
+        r"|\\b(?:it|that)\\s+(?:works|worked)\\b"
+        r"|\\b(?:fixed|solved|resolved)\\b",
+        normalized,
+    )
+    negated = re.search(r"\\b(?:not|never|no|didnt|doesnt|isnt|wasnt|wont|still not)\\b", normalized)
+    if resolution and not negated:
         return Move("resolved")
     if normalized in {"can you explain that more simply", "explain that more simply", "simpler please", "explain it simply", "in simpler terms"}:
         return Move("simplify")
