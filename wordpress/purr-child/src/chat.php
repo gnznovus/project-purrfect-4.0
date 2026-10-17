@@ -43,13 +43,13 @@ add_action('wp_ajax_purr_child_chat', static function (): void {
     if (!is_array($inventory) || empty($inventory['active'])) {
         wp_send_json_error('Registry is not ready. Wait for the heartbeat.', 503);
     }
-    $context = [];
+    $context = new stdClass();
     if (isset($_POST['context']) && is_string($_POST['context'])) {
         $parsed = json_decode(wp_unslash($_POST['context']), true);
         if (!is_array($parsed) || strlen(wp_unslash($_POST['context'])) > 4096) {
             wp_send_json_error('Invalid context', 400);
         }
-        $context = $parsed;
+        $context = (object) $parsed;
     }
     $response = wp_remote_post('http://purra:8765/v1/chat', [
         'timeout' => 8,
