@@ -130,7 +130,9 @@ function purr_child_knowledge_valid(array $package): bool {
     }
     $seen = [];
     foreach ($items as $item) {
-        if (!is_array($item) || array_keys($item) !== ['id', 'content', 'source']
+        if (!is_array($item) || count($item) !== 3
+            || !array_key_exists('id', $item) || !array_key_exists('content', $item)
+            || !array_key_exists('source', $item)
             || !is_string($item['id']) || $item['id'] === ''
             || !is_string($item['content']) || $item['content'] === ''
             || !is_string($item['source']) || $item['source'] === ''
