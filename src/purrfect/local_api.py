@@ -166,8 +166,13 @@ def respond(payload: dict, state: LocalState) -> dict:
                 pass
         # Invalid model output is not grounds to classify user feedback as
         # unsupported. The static templates are deliberately a fallback.
-        if move is None or (move.kind in ("new", "clarify") and
-                           (greeting or pleasantry or fallback is not None)):
+        if (move is None
+                or (move.kind in ("new", "clarify")
+                    and (greeting or pleasantry or fallback is not None))
+                or (fallback is not None and fallback.kind == "resolved"
+                    and move.kind == "unresolved")):
+            # Clear affirmative success overrides a contradictory failure
+            # classification, not otherwise-valid dynamic wording.
             move = fallback
         kind = move.kind if move is not None else "new"
         def conversation_answer(default, status="grounded"):
