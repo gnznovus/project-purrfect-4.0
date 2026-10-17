@@ -21,12 +21,12 @@ def heuristic(message: str) -> Move | None:
     # Success confirmations have many informal spellings. Negated success is
     # never a resolution, and must not be overridden by a mistaken model route.
     resolution = re.search(
-        r"\\b(?:work(?:s|ed|ing)?|fixed|solved|resolved)\\s+(?:fine\\s+)?now\\b"
-        r"|\\b(?:it|that)\\s+(?:works|worked)\\b"
-        r"|\\b(?:fixed|solved|resolved)\\b",
+        r"\b(?:work(?:s|ed|ing)?|fixed|solved|resolved)\s+(?:fine\s+)?now\b"
+        r"|\b(?:it|that)\s+(?:works|worked)\b"
+        r"|\b(?:fixed|solved|resolved)\b",
         normalized,
     )
-    negated = re.search(r"\\b(?:not|never|no|didnt|doesnt|isnt|wasnt|wont|still not)\\b", normalized)
+    negated = re.search(r"\b(?:not|never|no|didnt|doesnt|isnt|wasnt|wont|still not)\b", normalized)
     if resolution and not negated:
         return Move("resolved")
     if normalized in {"can you explain that more simply", "explain that more simply", "simpler please", "explain it simply", "in simpler terms"}:
@@ -61,7 +61,7 @@ async def classify_move(model, message: str, context: dict) -> Move:
     reply = data.get("reply")
     if not isinstance(reply, str) or not 1 <= len(reply) <= 240:
         reply = None
-    elif re.search(r"[\r\n`{}<>]|https?://|www\\.|\\b(?:click|install|delete|run|execute|configure|navigate|upload|download|activate|deactivate|paste|command)\\b", reply, re.I):
+    elif re.search(r"[\r\n`{}<>]|https?://|www\\.|\b(?:click|install|delete|run|execute|configure|navigate|upload|download|activate|deactivate|paste|command)\b", reply, re.I):
         reply = None
     elif data["kind"] in {"unresolved", "clarify"} and not reply.rstrip().endswith("?"):
         reply = None
