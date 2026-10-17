@@ -98,7 +98,8 @@ def respond(payload: dict, state: LocalState) -> dict:
             if answer.get("sources"):
                 item = answer["sources"][0]
                 next_state = next_state.updated(topic=next_state.topic, scope=next_state.scope,
-                    pending=next_state.pending, evidence_id=item["id"])
+                    pending=next_state.pending, evidence_id=item["id"],
+                    outcome=next_state.outcome)
             state.sessions[session_id] = next_state
             answer["context"] = next_state.export()
             return answer
@@ -147,7 +148,7 @@ def respond(payload: dict, state: LocalState) -> dict:
 
         # Conversational moves do not start new product retrievals.
         move = heuristic(message)
-        if move is None and state.model is not None and (
+        if move is None and state.model is not None and not re.search(r"\\b(?:i meant|instead|switch to|rather than)\\b", lowered) and (
             conversation.topic and (
                 len(lowered.split()) <= 7
                 or any(term in lowered for term in ("didnt", "didn't", "worked", "simpler", "previous", "meant"))
