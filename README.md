@@ -134,3 +134,26 @@ Open http://localhost:8084/wp-admin/ and use **Purr Child Lab**. The transcript 
 PowerShell environment overrides apply to the Compose invocation that starts the service. To return to deterministic mode, set `$env:PURRA_BRAIN_MODE = "deterministic"` and recreate just `purra`. The Ollama model remains a **local optional Docker service**, with no host port published.
 
 **Limitations:** This is classification + verified retrieval, not free-form LLM answers, complete 1.4 multi-turn reasoning, production authentication, or semantic RAG. CI tests use fake models and do not verify actual Ollama availability or inference quality. Only enable in the isolated Docker lab.
+
+
+## Goal 1.7 — Floating admin Purr Child (POC)
+
+The existing WordPress plugin now mounts a fixed bottom-right Purr Child chat widget on **WordPress admin pages for users with manage_options**. It stays collapsed until opened, showing a short greeting bubble once per browser tab session. The old full-page **Purr Child Lab** remains available for debugging.
+
+The widget stores a bounded display history, session identifier, pending option labels, open state and prior text context in **sessionStorage**, scoped to origin, site and current WordPress user. Navigation and refresh in the same tab restore these; a new tab generally starts separately. Browser session-restore and duplicated-tab behavior remain browser-dependent. Browser context is untrusted: the backend validates shape/length and checks any product selection against the current active registry on every request.
+
+Purra handles greetings and basic conversational acknowledgements, and passes a previous-question hint to its existing constrained Brain scope classifier for follow-ups. Answers still come only from currently registered evidence or the Everyday WordPress FAQ. Backend memory and browser display history are separate: browser context can recover basic topic/selection after a Python restart, but **not the complete experimental CustomConversation/AdaptiveGuide checkpoints**. Integration of their richer guidance-task state into this live chat remains future hardening; no autonomous steps or knowledge writes were introduced.
+
+### Local acceptance
+
+```powershell
+git fetch origin
+git switch --track origin/feat/purr-conversation-widget-1-7
+docker compose -f wordpress/lab/compose.yaml --profile brain up -d --build
+```
+
+If you had already enabled Ollama, set `$env:PURRA_BRAIN_MODE = "ollama"` **before** the compose command above, or recreate the `purra` service with that environment afterward. No WordPress database wipe is required.
+
+Open http://localhost:8084/wp-admin/ then navigate around multiple admin pages and refresh. Confirm the bottom-right greeting and expandable widget, conversation transcript and pending choices persist. Try "Hi Purra!", "Can I ask something else?", a translation question, "What about that step?", and a correction to another product. For a fresh tab verify a separate conversation; deactivate a mock plugin and confirm the old restored context cannot produce its guidance. The old lab chat is still accessible for comparisons.
+
+The floating chat is an **admin-only local POC**, not a production-ready distributed assistant. CI covers Python behavior, PHP syntax, and JS syntax; live WordPress browser acceptance still requires the local Docker lab.
