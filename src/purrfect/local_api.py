@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from purrfect.brain_scope import select_scope
 from purrfect.ollama import OllamaModel
 from purrfect.conversation import Conversation
+from purrfect import troubleshooting as troubleshoot
 from purrfect.conversation_intent import heuristic, classify_move
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
@@ -20,6 +21,7 @@ from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
 @dataclass
 class LocalState:
     sessions: dict = field(default_factory=dict)
+    workflows: dict = field(default_factory=dict)
     mutex: Lock = field(default_factory=Lock)
     model: object | None = None
 
@@ -35,6 +37,28 @@ def _reply(response: GuidanceResponse, scope: str, sources=()):
         "sources": [{"id": e.id, "source": e.source, "product_id": e.product_id}
                     for e in sources],
     }
+
+
+def _procedure_options(pid, knowledge):
+    product = knowledge.products.get(pid)
+    return tuple(Option(f"troubleshoot:{pid}:{i}", "Troubleshoot: " + procedure.title)
+                 for i, procedure in enumerate(product.troubleshooting[:12])) if product else ()
+
+
+def _troubleshooting_reply(knowledge, workflow):
+    result = troubleshoot.current(knowledge, workflow)
+    interaction = None
+    if result.status == "awaiting_result":
+        interaction = Interaction(InputKind.SINGLE_SELECT, "troubleshooting_result", (
+            Option(f"check:{result.step_id}:worked", "It worked"),
+            Option(f"check:{result.step_id}:failed", "Didn't work"),
+            Option(f"check:{result.step_id}:why", "Why this step?"),
+        ))
+    answer = _reply(GuidanceResponse(result.message, result.status, interaction), "product")
+    if result.source:
+        answer["sources"] = [{"id": workflow.step_id, "source": result.source,
+                              "product_id": workflow.product_id}]
+    return answer
 
 
 def _choose(question: str, selection: str, knowledge: SiteKnowledge):
@@ -53,6 +77,8 @@ def _choose(question: str, selection: str, knowledge: SiteKnowledge):
                    else knowledge.products[selection].evidence)
         options = tuple(Option(f"guide:{selection}:{i}", item.title)
                         for i, item in enumerate(choices[:12]))
+        if selection in knowledge.products:
+            options += _procedure_options(selection, knowledge)
         if options:
             return _reply(GuidanceResponse(
                 "Which documented topic would you like help with?", "needs_input",
@@ -60,7 +86,10 @@ def _choose(question: str, selection: str, knowledge: SiteKnowledge):
             ), scope)
         return _reply(GuidanceResponse(
             "I don't have verified guidance yet. Could you clarify?", "clarification"), scope)
-    return _reply(GuidanceResponse("\n\n".join(e.text for e in results), "grounded"), scope, results)
+    procedures = _procedure_options(selection, knowledge) if selection in knowledge.products else ()
+    interaction = (Interaction(InputKind.SINGLE_SELECT, "troubleshooting_start", procedures)
+                   if procedures else None)
+    return _reply(GuidanceResponse("\n\n".join(e.text for e in results), "grounded", interaction), scope, results)
 
 
 def _clarify(knowledge: SiteKnowledge):
@@ -86,13 +115,28 @@ def respond(payload: dict, state: LocalState) -> dict:
     snapshot = payload["inventory"]
     result = discover(snapshot)
     knowledge = SiteKnowledge(result.products, EVERYDAY_WORDPRESS)
-    restored = Conversation.restore(context, set(knowledge.products))
+    if not isinstance(context, dict):
+        raise ValueError("Invalid browser context")
+    restored = Conversation.restore({k: v for k, v in context.items()
+                                     if k != "troubleshooting"}, set(knowledge.products))
     with state.mutex:
         previous = state.sessions.get(session_id)
         # A nonempty browser snapshot can restore context after a Python restart.
         # It cannot authorize product access: _choose always checks fresh registry.
         conversation = restored if previous is None else previous
-        def finish(answer, next_state):
+        workflow = state.workflows.get(session_id)
+        if workflow is None and context.get("troubleshooting") is not None:
+            try:
+                workflow = troubleshoot.restore(knowledge, context["troubleshooting"])
+            except (ValueError, TypeError, KeyError):
+                workflow = None
+        if workflow is not None:
+            try:
+                troubleshoot.current(knowledge, workflow)
+            except (ValueError, TypeError, KeyError):
+                workflow = None
+
+        def finish(answer, next_state, next_workflow=None):
             # A grounded answer can carry a reference, but only currently active
             # registered evidence is allowed to be replayed later.
             if answer.get("sources"):
@@ -101,10 +145,45 @@ def respond(payload: dict, state: LocalState) -> dict:
                     pending=next_state.pending, evidence_id=item["id"],
                     outcome=next_state.outcome)
             state.sessions[session_id] = next_state
+            if next_workflow is None:
+                state.workflows.pop(session_id, None)
+            else:
+                state.workflows[session_id] = next_workflow
             answer["context"] = next_state.export()
+            if next_workflow is not None:
+                answer["context"]["troubleshooting"] = next_workflow.export()
             return answer
 
+        def workflow_response(result):
+            if result == "why":
+                answer = _troubleshooting_reply(knowledge, workflow)
+                answer["message"] = troubleshoot.explain(knowledge, workflow) + "\n\n" + answer["message"]
+                return finish(answer, conversation, workflow)
+            updated, _ = troubleshoot.advance(knowledge, workflow, result)
+            answer = _troubleshooting_reply(knowledge, updated)
+            candidate = conversation.updated(topic=conversation.topic, scope=updated.product_id,
+                pending=updated.status == "awaiting_result",
+                outcome="resolved" if updated.status == "resolved" else "unresolved" if updated.status == "escalation_required" else "open",
+                evidence_id=conversation.evidence_id)
+            return finish(answer, candidate, updated)
+
         if selection is not None:
+            if selection.startswith("check:"):
+                parts = selection.split(":")
+                if len(parts) != 3 or parts[2] not in ("worked", "failed", "why") or workflow is None or workflow.status != "awaiting_result" or parts[1] != workflow.step_id:
+                    return finish(_reply(GuidanceResponse("That troubleshooting choice is no longer available.", "clarification"), "conversation"), conversation, workflow)
+                return workflow_response(parts[2])
+            if selection.startswith("troubleshoot:"):
+                parts = selection.split(":")
+                if len(parts) != 3 or not parts[2].isdigit() or conversation.scope != parts[1] or not conversation.topic:
+                    return finish(_clarify(knowledge), conversation)
+                product = knowledge.products.get(parts[1])
+                index = int(parts[2])
+                if product is None or index >= min(len(product.troubleshooting), 12):
+                    return finish(_clarify(knowledge), conversation)
+                started, _ = troubleshoot.start(knowledge, parts[1], product.troubleshooting[index].id)
+                return finish(_troubleshooting_reply(knowledge, started),
+                    conversation.updated(topic=conversation.topic, scope=parts[1], pending=True), started)
             if selection.startswith("guide:") and conversation.pending and conversation.topic:
                 parts = selection.split(":")
                 if len(parts) == 3 and parts[2].isdigit():
@@ -136,6 +215,14 @@ def respond(payload: dict, state: LocalState) -> dict:
 
         if not message.strip():
             raise ValueError("Message required")
+        if workflow is not None and workflow.status == "awaiting_result":
+            short = re.sub(r"[^a-z0-9 ]", "", message.casefold()).strip()
+            if short in ("worked", "it worked", "yes it worked", "fixed", "it is fixed",
+                         "didnt work", "it didnt work", "failed", "not working",
+                         "still not working", "why this step", "why"):
+                result = ("worked" if short in ("worked", "it worked", "yes it worked", "fixed", "it is fixed")
+                          else "why" if short in ("why", "why this step") else "failed")
+                return workflow_response(result)
         lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
         # The model is the first gate for conversational language. Product
         # evidence and interactive selections continue through fixed contracts.
