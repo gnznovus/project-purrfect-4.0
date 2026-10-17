@@ -84,3 +84,17 @@ def test_invalid_outcome_cannot_be_restored():
     data["context"] = {"outcome": "admin", "evidence_id": "a"}
     with pytest.raises(ValueError):
         respond(data, LocalState())
+
+
+def test_model_social_move_does_not_restart_product_scope():
+    class Model:
+        async def complete(self, system, user):
+            if "Choose exactly one conversational intent" in system:
+                return '{"kind":"social"}'
+            return '{"selection":"mock-layout"}'
+    state = LocalState(model=Model())
+    first = guided(state)
+    reply = respond(request("conv", "Could we chat briefly?"), state)
+    assert reply["scope"] == "conversation"
+    assert reply["status"] == "grounded"
+    assert reply["context"]["last_scope"] == first["context"]["last_scope"]
