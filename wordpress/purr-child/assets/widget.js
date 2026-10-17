@@ -45,14 +45,13 @@
   const status = element('div', 'pc-status');
   status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
   status.hidden = true;
-  const actions = element('div', 'pc-actions');
   const form = element('form', 'pc-form');
   const input = element('input');
   input.type = 'text'; input.maxLength = 2000; input.required = true;
   input.placeholder = 'Ask Purra...'; input.setAttribute('aria-label', 'Message');
   const send = element('button', '', 'Send'); send.type = 'submit';
   form.append(input, send);
-  panel.append(head, log, status, actions, form);
+  panel.append(head, log, status, form);
   root.append(greeting, fab, panel);
   function save() {
     try { sessionStorage.setItem(storageKey, JSON.stringify({
@@ -62,37 +61,60 @@
   function redraw() {
     panel.hidden = !opened; fab.hidden = opened; greeting.hidden = opened || greeted;
   }
-  function add(role, text) {
-    const item = element('p', 'pc-item' + (role === 'You' ? ' pc-user' : ''), role + ': ' + text);
-    log.append(item); log.scrollTop = log.scrollHeight;
-  }
-  function remember(role, text) {
-    history.push({ role, text }); if (history.length > 60) history.shift();
-    add(role, text); save();
-  }
-  function renderOptions() {
-    actions.replaceChildren();
-    if (!pending || !Array.isArray(pending.options)) return;
-    for (const opt of pending.options) {
-      if (!opt || typeof opt.id !== 'string' || typeof opt.label !== 'string') continue;
-      const button = element('button', '', opt.label);
-      button.type = 'button';
-      button.addEventListener('click', () => {
-        if (!busy) { remember('You', opt.label); submit('', opt.id); }
-      });
-      actions.append(button);
+  function renderMessage(entry) {
+    const line = element('div', 'pc-line' + (entry.role === 'You' ? ' pc-line-user' : ''));
+    if (entry.role === 'Purra') line.append(avatar());
+    const bubble = element('div', 'pc-bubble');
+    bubble.append(element('p', 'pc-item' + (entry.role === 'You' ? ' pc-user' : ''), entry.text));
+    if (entry.options && Array.isArray(entry.options)) {
+      const choices = element('div', 'pc-actions');
+      for (const option of entry.options) {
+        if (typeof option.id !== 'string' || typeof option.label !== 'string') continue;
+        const button = element('button', '', option.label);
+        button.type = 'button';
+        button.disabled = !pending || pending.turn !== entry.turn || busy;
+        button.addEventListener('click', () => {
+          if (busy || !pending || pending.turn !== entry.turn) return;
+          remember('You', option.label);
+          submit('', option.id);
+        });
+        choices.append(button);
+      }
+      bubble.append(choices);
     }
+    line.append(bubble);
+    log.append(line);
+    log.scrollTop = log.scrollHeight;
   }
-  for (const item of history) add(item.role, item.text);
-  if (!history.length) add('Purra', "Hi! I'm here if you need help.");
-  renderOptions(); redraw();
+  function remember(role, text, options = null) {
+    const entry = { role, text };
+    if (options) {
+      entry.turn = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      entry.options = options;
+      pending = { turn: entry.turn };
+    }
+    history.push(entry);
+    if (history.length > 60) history.shift();
+    renderAll();
+    save();
+  }
+  function renderAll() {
+    log.replaceChildren();
+    for (const entry of history) renderMessage(entry);
+  }
+  if (!history.length) history.push({ role: 'Purra', text: "Hi! I'm here if you need help." });
+  // Legacy pending data belonged to the fixed bottom action strip. Never
+  // resurrect choices without an associated Purra response.
+  if (!history.some(item => item.turn && pending && item.turn === pending.turn)) pending = null;
+  renderAll();
+  redraw();
   fab.addEventListener('click', () => { opened = true; greeted = true; redraw(); save(); input.focus(); });
   close.addEventListener('click', () => { opened = false; redraw(); save(); });
   async function submit(message, selection = null) {
     if (busy) return;
     busy = true; send.disabled = true;
     const previousPending = pending;
-    pending = null; renderOptions(); save();
+    pending = null; renderAll(); save();
     const started = performance.now();
     const update = () => {
       const seconds = Math.floor((performance.now() - started) / 1000);
@@ -114,19 +136,19 @@
       if (!res.ok || !result.success) throw new Error(
         typeof result.data === 'string' ? result.data : 'Request failed');
       const data = result.data;
-      remember('Purra', data.message || 'No response.');
+      const choices = data.interaction && Array.isArray(data.interaction.options)
+        ? data.interaction.options : null;
+      remember('Purra', data.message || 'No response.', choices);
       if (Array.isArray(data.sources) && data.sources.length) {
         remember('Source', data.sources.map(x => x.source).filter(Boolean).join(', '));
       }
       if (data.context && typeof data.context === 'object' && !Array.isArray(data.context)) context = data.context;
-      pending = data.interaction && Array.isArray(data.interaction.options)
-        ? { options: data.interaction.options } : null;
-      renderOptions(); save();
+      renderAll(); save();
     } catch (error) {
       remember('Connection', error.message);
       // A failed request must not silently invalidate an existing choice.
       if (selection !== null) pending = previousPending;
-      renderOptions(); save();
+      renderAll(); save();
     }
     finally { clearInterval(tick); status.hidden = true; status.textContent = '';
       busy = false; send.disabled = false; }
