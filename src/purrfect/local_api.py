@@ -111,7 +111,8 @@ def respond(payload: dict, state: LocalState) -> dict:
                                         "wordpress" if chosen_scope == "wordpress" else "product",
                                         (item,))
                         return finish(answer, conversation.updated(scope=chosen_scope))
-                return finish(_clarify(knowledge), conversation.updated(pending=True))
+                # Reject a forged/stale topic without changing the valid pending scope.
+                return finish(_clarify(knowledge), conversation)
             if not conversation.pending or not conversation.topic:
                 return finish(_clarify(knowledge), conversation.updated(pending=True))
             if selection not in (set(knowledge.products) | {"wordpress", "other"}):
