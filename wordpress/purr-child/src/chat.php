@@ -81,11 +81,12 @@ add_action('admin_footer', static function (): void {
 
 add_action('admin_enqueue_scripts', static function (): void {
     if (!current_user_can('manage_options')) return;
-    wp_enqueue_style('purr-child-widget', plugins_url('../assets/widget.css', __FILE__), [], '0.1.0');
-    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.0', true);
+    wp_enqueue_style('purr-child-widget', plugins_url('../assets/widget.css', __FILE__), [], '0.1.1');
+    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.1', true);
     wp_add_inline_script('purr-child-widget', 'window.purrChildWidget = ' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('purr_child_lab'),
         'scope' => get_current_blog_id() . ':' . get_current_user_id(),
+        'purraAvatar' => plugins_url('../assets/purra-avatar.png', __FILE__),
     ]) . ';', 'before');
 });
