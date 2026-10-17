@@ -287,3 +287,16 @@ def test_17c_new_session_cannot_inherit_previous_choices():
     fresh = respond(request("fresh-session", "", "guide:mock-layout:0"), state)
     assert fresh["sources"] == []
     assert fresh["status"] == "needs_input"
+
+
+def test_generic_help_variants_do_not_classify_as_outside_support():
+    class AlwaysOther:
+        async def complete(self, system, user):
+            return '{"selection":"other"}'
+
+    for message in ("i need some help here", "i need help here",
+                    "Can you help me please?", "please help with this"):
+        reply = respond(request("generic-" + message, message), LocalState(model=AlwaysOther()))
+        assert reply["status"] == "needs_input"
+        assert reply["interaction"]["key"] == "support_scope"
+        assert "mock-layout" in {o["id"] for o in reply["interaction"]["options"]}
