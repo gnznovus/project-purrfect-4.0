@@ -244,3 +244,20 @@ def test_17b_restored_intent_choice_rechecks_current_product():
     invalid = respond(restore, LocalState())
     assert invalid["sources"] == []
     assert invalid["status"] == "needs_input"
+
+
+def test_17b_generic_help_offers_scope_choices_without_calling_model():
+    class ModelMustNotRun:
+        async def complete(self, system, user):
+            raise AssertionError("Generic help must not invoke the Brain")
+    state = LocalState(model=ModelMustNotRun())
+    reply = respond(request("help-session", "i need some help"), state)
+    assert reply["status"] == "needs_input"
+    assert reply["interaction"]["key"] == "support_scope"
+    assert reply["context"]["pending"] is True
+    chosen = respond(request("help-session", "", "mock-layout"), state)
+    assert chosen["status"] == "needs_input"
+    assert chosen["interaction"]["key"] == "support_intent"
+    guide = respond(request("help-session", "", "guide:mock-layout:0"), state)
+    assert guide["status"] == "grounded"
+    assert [x["id"] for x in guide["sources"]] == ["a"]
