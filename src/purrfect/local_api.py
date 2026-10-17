@@ -112,14 +112,14 @@ def respond(payload: dict, state: LocalState) -> dict:
 
         # Explicit corrections override the previous scope, rather than carrying
         # old product-specific evidence into a newly chosen product.
-        correction = re.search(r"\\b(?:i meant|instead|switch to|rather than)\\b", message.lower())
-        reference = re.search(r"\\b(?:it|that|those|previous|again|step)\\b", message.lower())
+        correction = re.search(r"\b(?:i meant|instead|switch to|rather than)\b", message.lower())
+        reference = re.search(r"\b(?:it|that|those|previous|again|step)\b", message.lower())
         topic = conversation.topic if reference and conversation.topic and not correction else message
         candidate = conversation.updated(topic=topic, scope=None, pending=False)
 
         if state.model is not None:
             try:
-                prompt = (f"Previous user question: {conversation.topic}\\n"
+                prompt = (f"Previous user question: {conversation.topic}\n"
                           f"Current user request: {message}"
                           if (reference or correction) and conversation.topic else message)
                 decision = asyncio.run(select_scope(state.model, prompt, knowledge))
