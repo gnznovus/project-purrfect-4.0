@@ -137,6 +137,13 @@ def respond(payload: dict, state: LocalState) -> dict:
                     else "You're welcome! I'm here if you need anything else.")
             return finish(_reply(GuidanceResponse(text, "grounded"), "conversation"), conversation)
 
+        # A general request for help has no product target yet. Ask instead
+        # of allowing a small classifier to label it unrelated.
+        if lowered in ("help", "help me", "i need help", "i need some help",
+                       "can you help me", "i need assistance", "please help"):
+            candidate = conversation.updated(topic=message, scope=None, pending=True)
+            return finish(_clarify(knowledge), candidate)
+
         # Explicit corrections override the previous scope, rather than carrying
         # old product-specific evidence into a newly chosen product.
         correction = re.search(r"\b(?:i meant|instead|switch to|rather than)\b", message.lower())
@@ -187,7 +194,7 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
     model = OllamaModel(
         model=os.environ.get("PURRA_OLLAMA_MODEL", "llama3.2:3b"),
         base_url=os.environ.get("PURRA_OLLAMA_URL", "http://ollama:11434"),
-        timeout=5.0,
+        timeout=20.0,
     ) if mode == "ollama" else None
     state = LocalState(model=model)
 
