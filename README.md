@@ -157,3 +157,12 @@ If you had already enabled Ollama, set `$env:PURRA_BRAIN_MODE = "ollama"` **befo
 Open http://localhost:8084/wp-admin/ then navigate around multiple admin pages and refresh. Confirm the bottom-right greeting and expandable widget, conversation transcript and pending choices persist. Try "Hi Purra!", "Can I ask something else?", a translation question, "What about that step?", and a correction to another product. For a fresh tab verify a separate conversation; deactivate a mock plugin and confirm the old restored context cannot produce its guidance. The old lab chat is still accessible for comparisons.
 
 The floating chat is an **admin-only local POC**, not a production-ready distributed assistant. CI covers Python behavior, PHP syntax, and JS syntax; live WordPress browser acceptance still requires the local Docker lab.
+
+
+## Purra character avatar integration
+
+This branch displays Purra's illustration in the floating launcher, chat title, and top-left of her message rows. User-facing widget name is **Purra**; internal Purr Child plugin identifiers remain unchanged. Aurora's matching avatar is reserved for future use.
+
+**Artwork delivery step:** The PNG assets are supplied separately in `purra_avatar_assets.zip` (not included in the GitHub source commit). Extract the archive **at the repository root** so that `wordpress/purr-child/assets/purra-avatar.png` and `wordpress/purr-child/assets/aurora-avatar.png` exist. The files are optimized 512×512 transparent PNGs derived from the approved individual portraits. The Purr Child plugin directory is bind-mounted into the local WordPress container, so the images become available without rebuilding.
+
+Switch to `feat/purra-avatar-ui-1-7`, extract the assets, then refresh WordPress admin. Check the collapsed avatar, header, and Purra message avatars. No changes were made to Purra's HTTP or Brain contracts.
