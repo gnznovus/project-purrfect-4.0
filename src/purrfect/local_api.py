@@ -94,7 +94,7 @@ def respond(payload: dict, state: LocalState) -> dict:
             if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
                 return _reply(GuidanceResponse("Of course! What would you like help with next?" if "ask" in lowered else "You're welcome! I'm here if you need anything else.", "grounded"), "conversation")
             references_prior = bool(prior_question and re.search(
-                r"\\b(it|that|those|previous|again|step|meant|instead)\\b", message.lower()
+                r"\b(it|that|those|previous|again|step|meant|instead)\b", message.lower()
             ))
             topic = prior_question if references_prior else message
             state.sessions[session_id] = topic
