@@ -4,6 +4,7 @@ Classification is separate from verified product knowledge. A language model
 may identify the conversational move, but never supply technical instructions.
 """
 import json
+import re
 from dataclasses import dataclass
 
 KINDS = frozenset({"new", "followup", "correction", "unresolved", "resolved", "simplify", "social", "clarify"})
@@ -13,8 +14,8 @@ class Move:
     kind: str
 
 def heuristic(message: str) -> Move | None:
-    normalized = " ".join(message.lower().strip().rstrip(".!?").split())
-    if normalized in {"that didn't work", "it didn't work", "still doesn't work", "not working", "didn't work", "that does not work"}:
+    normalized = " ".join(re.sub(r"[^a-z0-9 ]", "", message.lower()).split())
+    if normalized in {"that didnt work", "it didnt work", "still doesnt work", "not working", "didnt work", "that does not work"}:
         return Move("unresolved")
     if normalized in {"thanks it worked", "thank you it worked", "it worked", "that worked", "fixed now", "solved", "problem solved"}:
         return Move("resolved")
