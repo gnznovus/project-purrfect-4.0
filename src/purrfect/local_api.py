@@ -105,7 +105,7 @@ def respond(payload: dict, state: LocalState) -> dict:
                                  else knowledge.products[chosen_scope].evidence
                                  if chosen_scope in knowledge.products else ())
                     index = int(parts[2])
-                    if 0 <= index < min(len(documents), 12):
+                    if chosen_scope == conversation.scope and 0 <= index < min(len(documents), 12):
                         item = documents[index]
                         answer = _reply(GuidanceResponse(item.text, "grounded"),
                                         "wordpress" if chosen_scope == "wordpress" else "product",
@@ -166,7 +166,7 @@ def respond(payload: dict, state: LocalState) -> dict:
                 answer = _choose(topic, decision, knowledge)
                 if answer["status"] in ("grounded", "unsupported", "needs_input"):
                     answer["routing"] = "brain"
-                    scope = decision if answer["status"] == "grounded" else None
+                    scope = decision if answer["status"] in ("grounded", "needs_input") else None
                     return finish(answer, candidate.updated(scope=scope, pending=answer["status"] == "needs_input"))
             answer = _clarify(knowledge)
             answer["routing"] = "brain-clarify"
