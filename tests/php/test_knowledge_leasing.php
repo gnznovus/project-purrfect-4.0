@@ -26,7 +26,14 @@ $first = make_lease(1, [
     ['id' => 'a', 'content' => 'one', 'source' => 'mock://a'],
     ['id' => 'b', 'content' => 'two', 'source' => 'mock://b'],
 ]);
-check_lease(purr_child_knowledge_valid($first), 'Valid Python-compatible package rejected');
+check_lease(purr_child_knowledge_valid($first), 'Valid PHP package rejected');
+$python_encoded = json_decode(json_encode($first, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), true);
+foreach ($python_encoded['items'] as &$item) {
+    ksort($item);
+}
+unset($item);
+ksort($python_encoded);
+check_lease(purr_child_knowledge_valid($python_encoded), 'Canonical Python JSON key order rejected');
 $bad = $first;
 $bad['items'][0]['content'] = 'tampered';
 check_lease(!purr_child_knowledge_valid($bad), 'Tampering not detected');
