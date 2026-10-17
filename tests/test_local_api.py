@@ -215,3 +215,31 @@ def test_17b_other_session_cannot_use_pending_choice():
     result = respond(request("b", "", "mock-layout"), state)
     assert result["status"] == "needs_input"
     assert result["sources"] == []
+
+
+def test_17b_interactive_intent_from_verified_evidence():
+    state = LocalState()
+    result = respond(request("guide", "Help with something"), state)
+    assert result["status"] == "needs_input"
+    product = respond(request("guide", "", "mock-layout"), state)
+    assert product["status"] == "needs_input"
+    assert product["interaction"]["key"] == "support_intent"
+    assert product["interaction"]["options"] == [
+        {"id": "guide:mock-layout:0", "label": "Edit layout blocks"}
+    ]
+    verified = respond(request("guide", "", "guide:mock-layout:0"), state)
+    assert verified["status"] == "grounded"
+    assert [x["id"] for x in verified["sources"]] == ["a"]
+
+
+def test_17b_restored_intent_choice_rechecks_current_product():
+    state = LocalState()
+    respond(request("guide", "Help with something"), state)
+    pending = respond(request("guide", "", "mock-layout"), state)
+    restore = request("guide", "", "guide:mock-layout:0")
+    restore["context"] = pending["context"]
+    assert respond(restore, LocalState())["status"] == "grounded"
+    restore["inventory"] = {"active": [], "signals": []}
+    invalid = respond(restore, LocalState())
+    assert invalid["sources"] == []
+    assert invalid["status"] == "needs_input"
