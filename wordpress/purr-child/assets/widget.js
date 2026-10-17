@@ -11,7 +11,7 @@
     ? saved.session : (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-session');
   const history = Array.isArray(saved.history) ? saved.history.slice(-60).filter(
     x => x && ['You','Purra','Source','Connection'].includes(x.role) && typeof x.text === 'string' && x.text.length < 4000) : [];
-  let context = saved.context && typeof saved.context === 'object' ? saved.context : {};
+  let context = saved.context && typeof saved.context === 'object' && !Array.isArray(saved.context) ? saved.context : {};
   let pending = saved.pending && typeof saved.pending === 'object' ? saved.pending : null;
   let opened = Boolean(saved.opened);
   let greeted = Boolean(saved.greeted);
@@ -91,6 +91,7 @@
   async function submit(message, selection = null) {
     if (busy) return;
     busy = true; send.disabled = true;
+    const previousPending = pending;
     pending = null; renderOptions(); save();
     const started = performance.now();
     const update = () => {
@@ -117,12 +118,16 @@
       if (Array.isArray(data.sources) && data.sources.length) {
         remember('Source', data.sources.map(x => x.source).filter(Boolean).join(', '));
       }
-      if (data.context && typeof data.context === 'object') context = data.context;
-      else if (selection === null && message.trim()) context = { last_question: message };
+      if (data.context && typeof data.context === 'object' && !Array.isArray(data.context)) context = data.context;
       pending = data.interaction && Array.isArray(data.interaction.options)
         ? { options: data.interaction.options } : null;
       renderOptions(); save();
-    } catch (error) { remember('Connection', error.message); }
+    } catch (error) {
+      remember('Connection', error.message);
+      // A failed request must not silently invalidate an existing choice.
+      if (selection !== null) pending = previousPending;
+      renderOptions(); save();
+    }
     finally { clearInterval(tick); status.hidden = true; status.textContent = '';
       busy = false; send.disabled = false; }
   }
