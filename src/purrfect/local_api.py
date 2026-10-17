@@ -48,7 +48,17 @@ def _choose(question: str, selection: str, knowledge: SiteKnowledge):
     else:
         return _clarify(knowledge)
     if not results:
-        return _reply(GuidanceResponse("I don't have verified guidance yet. What specifically are you trying to do?", "clarification"), scope)
+        choices = (knowledge.wordpress if selection == "wordpress"
+                   else knowledge.products[selection].evidence)
+        options = tuple(Option(f"guide:{selection}:{i}", item.title)
+                        for i, item in enumerate(choices[:12]))
+        if options:
+            return _reply(GuidanceResponse(
+                "Which documented topic would you like help with?", "needs_input",
+                Interaction(InputKind.SINGLE_SELECT, "support_intent", options),
+            ), scope)
+        return _reply(GuidanceResponse(
+            "I don't have verified guidance yet. Could you clarify?", "clarification"), scope)
     return _reply(GuidanceResponse("\n\n".join(e.text for e in results), "grounded"), scope, results)
 
 
@@ -87,6 +97,21 @@ def respond(payload: dict, state: LocalState) -> dict:
             return answer
 
         if selection is not None:
+            if selection.startswith("guide:") and conversation.pending and conversation.topic:
+                parts = selection.split(":")
+                if len(parts) == 3 and parts[2].isdigit():
+                    chosen_scope = parts[1]
+                    documents = (knowledge.wordpress if chosen_scope == "wordpress"
+                                 else knowledge.products[chosen_scope].evidence
+                                 if chosen_scope in knowledge.products else ())
+                    index = int(parts[2])
+                    if 0 <= index < min(len(documents), 12):
+                        item = documents[index]
+                        answer = _reply(GuidanceResponse(item.text, "grounded"),
+                                        "wordpress" if chosen_scope == "wordpress" else "product",
+                                        (item,))
+                        return finish(answer, conversation.updated(scope=chosen_scope))
+                return finish(_clarify(knowledge), conversation.updated(pending=True))
             if not conversation.pending or not conversation.topic:
                 return finish(_clarify(knowledge), conversation.updated(pending=True))
             if selection not in (set(knowledge.products) | {"wordpress", "other"}):
@@ -94,6 +119,8 @@ def respond(payload: dict, state: LocalState) -> dict:
             answer = _choose(conversation.topic, selection, knowledge)
             if answer["status"] == "grounded":
                 return finish(answer, conversation.updated(scope=selection))
+            if answer["status"] == "needs_input":
+                return finish(answer, conversation.updated(scope=selection, pending=True))
             if answer["status"] == "unsupported":
                 return finish(answer, conversation.updated(scope=None))
             return finish(answer, conversation.updated(scope=None, pending=True))
@@ -130,10 +157,10 @@ def respond(payload: dict, state: LocalState) -> dict:
                 return finish(answer, candidate.updated(pending=True))
             if decision is not None:
                 answer = _choose(topic, decision, knowledge)
-                if answer["status"] in ("grounded", "unsupported"):
+                if answer["status"] in ("grounded", "unsupported", "needs_input"):
                     answer["routing"] = "brain"
                     scope = decision if answer["status"] == "grounded" else None
-                    return finish(answer, candidate.updated(scope=scope))
+                    return finish(answer, candidate.updated(scope=scope, pending=answer["status"] == "needs_input"))
             answer = _clarify(knowledge)
             answer["routing"] = "brain-clarify"
             return finish(answer, candidate.updated(pending=True))
