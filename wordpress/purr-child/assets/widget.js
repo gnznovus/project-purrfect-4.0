@@ -22,15 +22,23 @@
     if (text != null) node.textContent = text;
     return node;
   };
-  const fab = element('button', 'pc-fab', '🐈');
-  fab.type = 'button'; fab.setAttribute('aria-label', 'Open Purr Child');
+  const avatar = () => {
+    const img = element('img', 'pc-avatar');
+    img.src = cfg.purraAvatar; img.alt = ''; img.loading = 'eager';
+    return img;
+  };
+  const fab = element('button', 'pc-fab');
+  fab.append(avatar());
+  fab.type = 'button'; fab.setAttribute('aria-label', 'Open Purra');
   const greeting = element('div', 'pc-greeting', "Hi! I'm here if you need help.");
   const panel = element('section', 'pc-panel');
-  panel.setAttribute('aria-label', 'Purr Child chat');
+  panel.setAttribute('aria-label', 'Purra chat');
   const head = element('div', 'pc-head');
-  head.append(element('span', '', '🐈 Purr Child'));
+  const title = element('span', 'pc-title');
+  title.append(avatar(), element('span', '', 'Purra'));
+  head.append(title);
   const close = element('button', 'pc-close', '×');
-  close.type = 'button'; close.setAttribute('aria-label', 'Collapse Purr Child');
+  close.type = 'button'; close.setAttribute('aria-label', 'Collapse Purra');
   head.append(close);
   const log = element('div', 'pc-log');
   log.setAttribute('role', 'log');
@@ -41,7 +49,7 @@
   const form = element('form', 'pc-form');
   const input = element('input');
   input.type = 'text'; input.maxLength = 2000; input.required = true;
-  input.placeholder = 'Ask Purr Child...'; input.setAttribute('aria-label', 'Message');
+  input.placeholder = 'Ask Purra...'; input.setAttribute('aria-label', 'Message');
   const send = element('button', '', 'Send'); send.type = 'submit';
   form.append(input, send);
   panel.append(head, log, status, actions, form);
