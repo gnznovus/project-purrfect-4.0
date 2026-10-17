@@ -34,14 +34,14 @@ def test_separate_sessions_and_removed_product():
     dropped = {"active": [], "signals": []}
     result = respond(request("a", "", "mock-layout", dropped), state)
     assert result["status"] == "needs_input"
-    assert respond(request("b", "", "wordpress"), state)["scope"] == "wordpress"
+    assert respond(request("b", "", "wordpress"), state)["scope"] == "clarify"  # no pending choice
 
 
 def test_unsupported_and_validation():
     state = LocalState()
     respond(request("a", "Help"), state)
     assert respond(request("a", "", "other"), state)["status"] == "unsupported"
-    assert respond(request("missing", "", "mock-layout"), state)["status"] == "clarification"
+    assert respond(request("missing", "", "mock-layout"), state)["status"] == "needs_input"
     try:
         respond(request("a", "", "mock-layout") | {"inventory": {"signals": []}}, state)
     except ValueError:
@@ -174,3 +174,44 @@ def test_17_json_object_empty_context_first_message():
     response = respond(actual, LocalState())
     assert response["scope"] == "conversation"
     assert response["status"] == "grounded"
+
+
+def test_17b_stale_choice_is_not_accepted_after_new_topic():
+    state = LocalState()
+    first = respond(request("a", "I cannot edit my page"), state)
+    assert first["context"]["pending"] is True
+    direct = respond(request("a", "I forgot login password"), state)
+    assert direct["status"] == "grounded"
+    stale = respond(request("a", "", "mock-layout"), state)
+    assert stale["status"] == "needs_input"
+    assert stale["sources"] == []
+
+
+def test_17b_recover_pending_choice_after_server_restart():
+    state = LocalState()
+    answer = respond(request("a", "I cannot edit my page"), state)
+    assert answer["context"]["pending"]
+    recovered = request("a", "", "mock-layout")
+    recovered["context"] = answer["context"]
+    output = respond(recovered, LocalState())
+    assert output["status"] == "grounded"
+    assert output["context"]["last_scope"] == "mock-layout"
+    assert output["context"]["pending"] is False
+
+
+def test_17b_inactive_product_cannot_be_restored():
+    state = LocalState()
+    first = respond(request("a", "I cannot edit my page"), state)
+    payload = request("a", "", "mock-layout", {"active": [], "signals": []})
+    payload["context"] = first["context"]
+    result = respond(payload, LocalState())
+    assert result["status"] == "needs_input"
+    assert result["sources"] == []
+
+
+def test_17b_other_session_cannot_use_pending_choice():
+    state = LocalState()
+    respond(request("a", "I cannot edit my page"), state)
+    result = respond(request("b", "", "mock-layout"), state)
+    assert result["status"] == "needs_input"
+    assert result["sources"] == []
