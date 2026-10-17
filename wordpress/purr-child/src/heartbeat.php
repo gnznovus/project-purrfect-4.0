@@ -113,8 +113,9 @@ function purr_child_register_heartbeat(array $components): array {
 
 /** Validate Sophira's canonical SHA-256 package independently in the Child. */
 function purr_child_knowledge_valid(array $package): bool {
-    if (array_keys($package) !== ['product_id', 'product_version', 'revision', 'contract_version', 'digest', 'items']
-        && count(array_diff(['product_id', 'product_version', 'revision', 'contract_version', 'digest', 'items'], array_keys($package))) > 0) {
+    $fields = array_keys($package);
+    sort($fields);
+    if ($fields !== ['contract_version', 'digest', 'items', 'product_id', 'product_version', 'revision']) {
         return false;
     }
     if (!is_string($package['product_id']) || !is_string($package['product_version'])
