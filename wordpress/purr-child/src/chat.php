@@ -59,6 +59,10 @@ add_action('wp_ajax_purr_child_chat', static function (): void {
             'session_id' => $session, 'message' => $message,
             'selection' => $selection, 'inventory' => $inventory,
             'context' => $context,
+            'knowledge_leases' => array_values(array_filter(
+                get_option('purr_child_knowledge_leases', []),
+                static fn($lease) => is_array($lease) && purr_child_knowledge_valid($lease)
+            )),
         ]),
     ]);
     if (is_wp_error($response)) {
