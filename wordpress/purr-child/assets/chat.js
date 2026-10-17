@@ -8,6 +8,25 @@
   if (!root || !log || !options || !input || !send) return;
   const session = globalThis.crypto?.randomUUID?.() || String(Date.now());
   let busy = false;
+  const status = document.createElement('p');
+  status.id = 'purr-pending';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  status.style.whiteSpace = 'pre-line';
+  status.style.color = '#50575e';
+  status.hidden = true;
+  log.after(status);
+  const stages = [
+    'Request sent to Purra.',
+    'Waiting for the local Brain to respond...',
+    'Still waiting for the response; local inference may take a moment...',
+  ];
+  function showPending(started) {
+    const seconds = Math.floor((performance.now() - started) / 1000);
+    const stage = seconds < 3 ? 0 : seconds < 7 ? 1 : 2;
+    status.textContent = `Thinking... ${seconds}s\n[verbose] ${stages[stage]}`;
+    status.hidden = false;
+  }
   const append = (speaker, value) => {
     const p = document.createElement('p');
     const strong = document.createElement('strong');
@@ -22,6 +41,9 @@
     send.disabled = true;
     options.replaceChildren();
     if (selection === null) append('You', message);
+    const started = performance.now();
+    showPending(started);
+    const ticker = setInterval(() => showPending(started), 1000);
     try {
       const form = new FormData();
       form.set('action', 'purr_child_chat');
@@ -53,6 +75,9 @@
     } catch (error) {
       append('Connection', error.message);
     } finally {
+      clearInterval(ticker);
+      status.hidden = true;
+      status.textContent = '';
       busy = false;
       send.disabled = false;
     }
