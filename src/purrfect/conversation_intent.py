@@ -26,7 +26,9 @@ def heuristic(message: str) -> Move | None:
         r"|\b(?:fixed|solved|resolved)\b",
         normalized,
     )
-    negated = re.search(r"\b(?:not|never|no|didnt|doesnt|isnt|wasnt|wont|still not)\b", normalized)
+    # "Never mind" is a discourse marker, not negation of success.
+    negation_text = re.sub(r"\bnever mind\b", "", normalized)
+    negated = re.search(r"\b(?:not|never|no|didnt|doesnt|isnt|wasnt|wont)\b", negation_text)
     if resolution and not negated:
         return Move("resolved")
     if normalized in {"can you explain that more simply", "explain that more simply", "simpler please", "explain it simply", "in simpler terms"}:
