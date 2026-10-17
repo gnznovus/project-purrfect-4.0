@@ -51,3 +51,18 @@ def test_corruption_rejected_without_silent_fallback(tmp_path):
         db.execute("UPDATE knowledge_revisions SET payload = ?", ('{"broken":true}',))
     with pytest.raises(ValueError):
         DurableSophira(path)
+
+def test_running_purra_observes_external_operator_publication(tmp_path):
+    path = tmp_path / "sophira.db"
+    running = DurableSophira(path)
+    operator = DurableSophira(path)
+    try:
+        operator.publish_approved(pack(1, "operator approved"), approved=True)
+        assert running.latest("mock-translation", "1") == 1
+        assert running.lease("mock-translation", "1").items[0].content == "operator approved"
+        operator.publish_approved(pack(2, "revision two"), approved=True)
+        assert running.latest("mock-translation", "1") == 2
+        assert running.lease("mock-translation", "1", 1).to_revision == 2
+    finally:
+        operator.close()
+        running.close()
