@@ -98,3 +98,32 @@ def test_model_social_move_does_not_restart_product_scope():
     assert reply["scope"] == "conversation"
     assert reply["status"] == "grounded"
     assert reply["context"]["last_scope"] == first["context"]["last_scope"]
+
+
+def test_dynamic_greeting_and_unresolved_without_prior_guidance():
+    class ConversationalBrain:
+        async def complete(self, system, user):
+            if "Choose exactly one conversational intent" in system:
+                import json
+                msg = json.loads(user)["message"]
+                if msg.lower().startswith("hi"):
+                    return '{"kind":"social","reply":"Hello there! What can I help you with?"}'
+                return '{"kind":"unresolved","reply":"Oh, what were you trying to do?"}'
+            raise AssertionError("Conversation must not be classified as unsupported")
+    state = LocalState(model=ConversationalBrain())
+    hello = respond(request("natural", "Hi !!"), state)
+    assert hello["message"] == "Hello there! What can I help you with?"
+    follow = respond(request("natural", "That didn't work."), state)
+    assert follow["status"] == "clarification"
+    assert follow["message"] == "Oh, what were you trying to do?"
+    assert follow["scope"] == "conversation"
+
+
+def test_bad_model_conversation_reply_falls_back_without_instructions():
+    class UnsafeBrain:
+        async def complete(self, system, user):
+            return '{"kind":"unresolved","reply":"Click Install and run commands."}'
+    response = respond(request("fallback", "That didn't work."), LocalState(model=UnsafeBrain()))
+    assert response["status"] == "clarification"
+    assert "What didn't work?" in response["message"]
+    assert "Install" not in response["message"]
