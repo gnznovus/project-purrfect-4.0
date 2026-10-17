@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from purrfect.brain_scope import select_scope
 from purrfect.ollama import OllamaModel
+from purrfect.conversation import Conversation
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
@@ -71,76 +72,85 @@ def respond(payload: dict, state: LocalState) -> dict:
     if selection is not None and not isinstance(selection, str):
         raise ValueError("Invalid selection")
     context = payload.get("context", {})
-    if not isinstance(context, dict) or set(context) - {"last_question", "last_scope"}:
-        raise ValueError("Invalid conversation context")
-    prior_question = context.get("last_question", "")
-    prior_scope = context.get("last_scope")
-    if not isinstance(prior_question, str) or len(prior_question) > 2000 or (prior_scope is not None and not isinstance(prior_scope, str)):
-        raise ValueError("Invalid conversation context")
     snapshot = payload["inventory"]
     result = discover(snapshot)
     knowledge = SiteKnowledge(result.products, EVERYDAY_WORDPRESS)
-    # All state is transient in this POC. No cross-site credentials or public API.
+    restored = Conversation.restore(context, set(knowledge.products))
     with state.mutex:
-        if session_id not in state.sessions and prior_question:
-            # Browser restore supplies only conversation text, never privileged product state.
-            state.sessions[session_id] = prior_question
-        if selection is None:
-            if not message.strip():
-                raise ValueError("Message required")
-            lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
-            if lowered in ("hi", "hello", "hey", "hi purra", "hello purra"):
-                return _reply(GuidanceResponse("Hi! I'm here if you need help with WordPress or your registered products.", "grounded"), "conversation")
-            if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
-                return _reply(GuidanceResponse("Of course! What would you like help with next?" if "ask" in lowered else "You're welcome! I'm here if you need anything else.", "grounded"), "conversation")
-            references_prior = bool(prior_question and re.search(
-                r"\b(it|that|those|previous|again|step|meant|instead)\b", message.lower()
-            ))
-            topic = prior_question if references_prior else message
-            state.sessions[session_id] = topic
-            if state.model is not None:
-                try:
-                    # Preserve conversational reference, but let the model reclassify
-                    # from current installed product capabilities on every turn.
-                    contextual = message
-                    if references_prior:
-                        contextual = f"Previous user question: {prior_question}\nCurrent user request: {message}"
-                    decision = asyncio.run(select_scope(state.model, contextual, knowledge))
-                except Exception:
-                    # Do not disguise an unavailable Brain as a successful inference.
-                    answer = _clarify(knowledge)
-                    answer["message"] = "The local Brain is unavailable. Please choose a supported area below."
-                    answer["routing"] = "brain-unavailable"
-                    return answer
-                if decision is not None:
-                    answer = _choose(topic, decision, knowledge)
-                    if answer["status"] in ("grounded", "unsupported"):
-                        answer["routing"] = "brain"
-                        answer["context"] = {"last_question": topic, "last_scope": decision}
-                        return answer
-                # Uncertainty, unverified matches and backend errors all clarify.
-                answer = _clarify(knowledge)
-                answer["routing"] = "brain-clarify"
-                return answer
-            words = set(message.lower().split())
-            hits = [p.id for p in knowledge.products.values()
-                    if words & (set(p.id.replace("-", " ").lower().split()) - {"mock", "product", "plugin"})]
-            if len(hits) == 1:
-                answer = _choose(message, hits[0], knowledge)
-                if answer["status"] == "grounded":
-                    return answer
-            if any(word in words for word in ("login", "password", "cache", "permalink")) and not hits:
-                answer = _choose(message, "wordpress", knowledge)
-                if answer["status"] == "grounded":
-                    return answer
-            return _clarify(knowledge)
         previous = state.sessions.get(session_id)
-        if previous is None:
-            return _reply(GuidanceResponse("The conversation expired. Please ask again.", "clarification"), "clarify")
-        answer = _choose(previous, selection, knowledge)
-        if answer["status"] == "grounded":
-            answer["context"] = {"last_question": previous, "last_scope": selection}
-        return answer
+        # A nonempty browser snapshot can restore context after a Python restart.
+        # It cannot authorize product access: _choose always checks fresh registry.
+        conversation = restored if previous is None else previous
+        def finish(answer, next_state):
+            state.sessions[session_id] = next_state
+            answer["context"] = next_state.export()
+            return answer
+
+        if selection is not None:
+            if not conversation.pending or not conversation.topic:
+                return finish(_clarify(knowledge), conversation.updated(pending=True))
+            if selection not in (set(knowledge.products) | {"wordpress", "other"}):
+                return finish(_clarify(knowledge), conversation.updated(pending=True))
+            answer = _choose(conversation.topic, selection, knowledge)
+            if answer["status"] == "grounded":
+                return finish(answer, conversation.updated(scope=selection))
+            if answer["status"] == "unsupported":
+                return finish(answer, conversation.updated(scope=None))
+            return finish(answer, conversation.updated(scope=None, pending=True))
+
+        if not message.strip():
+            raise ValueError("Message required")
+        lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
+        if lowered in ("hi", "hello", "hey", "hi purra", "hello purra"):
+            return finish(_reply(GuidanceResponse(
+                "Hi! I'm here if you need help with WordPress or your registered products.",
+                "grounded"), "conversation"), conversation)
+        if lowered in ("can i ask something else", "can i ask another question", "thank you", "thanks"):
+            text = ("Of course! What would you like help with next?" if "ask" in lowered
+                    else "You're welcome! I'm here if you need anything else.")
+            return finish(_reply(GuidanceResponse(text, "grounded"), "conversation"), conversation)
+
+        # Explicit corrections override the previous scope, rather than carrying
+        # old product-specific evidence into a newly chosen product.
+        correction = re.search(r"\\b(?:i meant|instead|switch to|rather than)\\b", message.lower())
+        reference = re.search(r"\\b(?:it|that|those|previous|again|step)\\b", message.lower())
+        topic = conversation.topic if reference and conversation.topic and not correction else message
+        candidate = conversation.updated(topic=topic, scope=None, pending=False)
+
+        if state.model is not None:
+            try:
+                prompt = (f"Previous user question: {conversation.topic}\\n"
+                          f"Current user request: {message}"
+                          if (reference or correction) and conversation.topic else message)
+                decision = asyncio.run(select_scope(state.model, prompt, knowledge))
+            except Exception:
+                answer = _clarify(knowledge)
+                answer["message"] = "The local Brain is unavailable. Please choose a supported area below."
+                answer["routing"] = "brain-unavailable"
+                return finish(answer, candidate.updated(pending=True))
+            if decision is not None:
+                answer = _choose(topic, decision, knowledge)
+                if answer["status"] in ("grounded", "unsupported"):
+                    answer["routing"] = "brain"
+                    scope = decision if answer["status"] == "grounded" else None
+                    return finish(answer, candidate.updated(scope=scope))
+            answer = _clarify(knowledge)
+            answer["routing"] = "brain-clarify"
+            return finish(answer, candidate.updated(pending=True))
+
+        words = set(message.lower().split())
+        hits = [p.id for p in knowledge.products.values()
+                if words & (set(p.id.replace("-", " ").lower().split())
+                            - {"mock", "product", "plugin"})]
+        if len(hits) == 1:
+            answer = _choose(topic, hits[0], knowledge)
+            if answer["status"] == "grounded":
+                return finish(answer, candidate.updated(scope=hits[0]))
+        if any(word in words for word in ("login", "password", "cache", "permalink")) and not hits:
+            answer = _choose(topic, "wordpress", knowledge)
+            if answer["status"] == "grounded":
+                return finish(answer, candidate.updated(scope="wordpress"))
+        return finish(_clarify(knowledge), candidate.updated(pending=True))
 
 
 def serve(host: str = "0.0.0.0", port: int = 8765):
