@@ -163,6 +163,10 @@ def respond(payload: dict, state: LocalState) -> dict:
             except Exception:
                 move = None
         kind = move.kind if move else "new"
+        if kind == "social":
+            return finish(_reply(GuidanceResponse(
+                "Of course! What would you like help with?", "grounded"),
+                "conversation"), conversation)
         if conversation.topic and kind == "resolved":
             answer = _reply(GuidanceResponse(
                 "Glad that worked! Let me know if you need help with anything else.",
