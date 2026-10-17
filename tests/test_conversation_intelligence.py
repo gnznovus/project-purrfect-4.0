@@ -127,3 +127,33 @@ def test_bad_model_conversation_reply_falls_back_without_instructions():
     assert response["status"] == "clarification"
     assert "What didn't work?" in response["message"]
     assert "Install" not in response["message"]
+
+
+def test_resolution_phrasings_override_contradictory_brain_classification():
+    class ConfusedBrain:
+        async def complete(self, system, user):
+            if "Choose exactly one conversational intent" in system:
+                return '{"kind":"unresolved","reply":"What did not work?"}'
+            return '{"selection":"mock-layout"}'
+
+    for phrase in (
+        "oh sorry it working now", "thank !! it work now",
+        "It works now!", "Thanks! That fixed it.",
+        "Never mind, it's working now.",
+    ):
+        state = LocalState(model=ConfusedBrain())
+        guided(state)
+        unresolved = respond(request("conv", "That didn't work."), state)
+        assert unresolved["context"]["outcome"] == "unresolved"
+        resolved = respond(request("conv", phrase), state)
+        assert resolved["context"]["outcome"] == "resolved", phrase
+        assert resolved["scope"] == "conversation", phrase
+        assert resolved["status"] == "grounded", phrase
+        assert resolved["message"] != "What did not work?", phrase
+
+
+def test_negated_success_is_not_resolution():
+    from purrfect.conversation_intent import heuristic
+    for phrase in ("not working now", "it still does not work", "it didn't work"):
+        move = heuristic(phrase)
+        assert move is None or move.kind != "resolved", phrase
