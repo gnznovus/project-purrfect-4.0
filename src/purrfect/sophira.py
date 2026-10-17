@@ -44,7 +44,7 @@ class KnowledgePackage:
     @property
     def digest(self) -> str:
         payload = [self.product_id, self.product_version, self.revision,
-                   self.contract_version, [(i.id, i.content, i.source) for i in self.items]]
+                   self.contract_version, [(i.id, i.content, i.source) for i in sorted(self.items, key=lambda i: i.id)]]
         return sha256(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
 
 
