@@ -20,12 +20,38 @@ class Evidence:
 
 
 @dataclass(frozen=True, slots=True)
+class TroubleshootingStep:
+    id: str
+    instruction: str
+    evidence_id: str
+
+    def __post_init__(self):
+        if not all(isinstance(x, str) and x.strip() for x in
+                   (self.id, self.instruction, self.evidence_id)):
+            raise ValueError("Troubleshooting step needs ID, instruction and evidence")
+
+
+@dataclass(frozen=True, slots=True)
+class TroubleshootingProcedure:
+    id: str
+    title: str
+    steps: tuple[TroubleshootingStep, ...]
+
+    def __post_init__(self):
+        if not isinstance(self.id, str) or not self.id.strip() or not isinstance(self.title, str) or not self.title.strip():
+            raise ValueError("Troubleshooting procedure needs ID and title")
+        if not self.steps or len({step.id for step in self.steps}) != len(self.steps):
+            raise ValueError("Procedure needs nonempty steps with unique IDs")
+
+
+@dataclass(frozen=True, slots=True)
 class RegisteredProduct:
     id: str
     version: str
     kind: str
     capabilities: tuple[str, ...]
     evidence: tuple[Evidence, ...]
+    troubleshooting: tuple[TroubleshootingProcedure, ...] = ()
 
     def __post_init__(self):
         if not self.id or not self.version or self.kind not in ("plugin", "theme"):
@@ -34,6 +60,12 @@ class RegisteredProduct:
             raise ValueError("Duplicate capabilities")
         if any(item.product_id != self.id or item.version != self.version for item in self.evidence):
             raise ValueError("Product evidence must match registered identity and version")
+        if len({p.id for p in self.troubleshooting}) != len(self.troubleshooting):
+            raise ValueError("Duplicate troubleshooting procedure IDs")
+        evidence_ids = {item.id for item in self.evidence}
+        if any(step.evidence_id not in evidence_ids
+               for procedure in self.troubleshooting for step in procedure.steps):
+            raise ValueError("Troubleshooting step must reference product evidence")
 
 
 class SiteKnowledge:
