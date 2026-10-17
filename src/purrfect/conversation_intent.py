@@ -12,6 +12,7 @@ KINDS = frozenset({"new", "followup", "correction", "unresolved", "resolved", "s
 @dataclass(frozen=True)
 class Move:
     kind: str
+    reply: str | None = None
 
 def heuristic(message: str) -> Move | None:
     normalized = " ".join(re.sub(r"[^a-z0-9 ]", "", message.lower()).split())
@@ -30,7 +31,11 @@ async def classify_move(model, message: str, context: dict) -> Move:
     system = (
         "Choose exactly one conversational intent: new, followup, correction, "
         "unresolved, resolved, simplify, social, clarify. "
-        "Return JSON with exactly one key 'kind'. New means a new support request. "
+        "Return JSON with keys kind and reply. For social, unresolved, resolved, and "
+        "clarify, write a short, natural reply in reply; otherwise reply must be null. "
+        "Never include technical instructions, product facts, URLs or commands in reply. "
+        "For unresolved feedback without previous guidance, ask what did not work. "
+        "New means a new support request. "
         "Followup refers to an existing issue, correction changes the requested "
         "product, unresolved means prior guidance failed, resolved means user "
         "confirms success, simplify asks to rephrase, social is pleasantry. "
@@ -42,6 +47,15 @@ async def classify_move(model, message: str, context: dict) -> Move:
         data = json.loads(raw)
     except (ValueError, TypeError):
         return Move("clarify")
-    if not isinstance(data, dict) or set(data) != {"kind"} or data["kind"] not in KINDS:
+    if not isinstance(data, dict) or data.get("kind") not in KINDS or set(data) - {"kind", "reply"}:
         return Move("clarify")
-    return Move(data["kind"])
+    reply = data.get("reply")
+    if not isinstance(reply, str) or not 1 <= len(reply) <= 240:
+        reply = None
+    elif re.search(r"[\r\n`{}<>]|https?://|www\\.|\\b(?:click|install|delete|run|execute|configure|navigate|upload|download|activate|deactivate|paste|command)\\b", reply, re.I):
+        reply = None
+    elif data["kind"] in {"unresolved", "clarify"} and not reply.rstrip().endswith("?"):
+        reply = None
+    if data["kind"] not in {"social", "unresolved", "resolved", "clarify"}:
+        reply = None
+    return Move(data["kind"], reply)
