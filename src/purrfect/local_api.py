@@ -148,7 +148,7 @@ def respond(payload: dict, state: LocalState) -> dict:
 
         # Conversational moves do not start new product retrievals.
         move = heuristic(message)
-        if move is None and state.model is not None and not re.search(r"\\b(?:i meant|instead|switch to|rather than)\\b", lowered) and (
+        if move is None and state.model is not None and not any(phrase in lowered for phrase in ("i meant", "instead", "switch to", "rather than")) and (
             conversation.topic and (
                 len(lowered.split()) <= 7
                 or any(term in lowered for term in ("didnt", "didn't", "worked", "simpler", "previous", "meant"))
