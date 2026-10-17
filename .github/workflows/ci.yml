@@ -34,6 +34,8 @@ jobs:
           php tests/php/test_discovery.php
           php tests/php/test_heartbeat.php
       - name: Local chat JavaScript syntax
-        run: node --check wordpress/purr-child/assets/chat.js
+        run: |
+          node --check wordpress/purr-child/assets/chat.js
+          node --check wordpress/purr-child/assets/widget.js
       - name: Docker Compose configuration
         run: docker compose -f wordpress/lab/compose.yaml config --quiet
