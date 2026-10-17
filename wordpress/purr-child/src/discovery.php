@@ -47,7 +47,8 @@ function purr_child_discover(): array {
             continue;
         }
         $fields = ['kind', 'key', 'product_id', 'version', 'contract', 'capabilities', 'knowledge'];
-        if (array_diff($fields, array_keys($signal)) || array_diff(array_keys($signal), $fields)) {
+        $allowed_fields = [...$fields, 'troubleshooting'];
+        if (array_diff($fields, array_keys($signal)) || array_diff(array_keys($signal), $allowed_fields)) {
             continue;
         }
         $kind = $signal['kind'];
