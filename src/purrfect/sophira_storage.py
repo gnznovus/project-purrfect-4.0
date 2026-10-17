@@ -68,12 +68,26 @@ class DurableSophira(SophiraCatalog):
                 )
             super().publish_approved(package, approved=True)
 
+    def _refresh_from_db(self):
+        # Other trusted operator processes may publish without restarting Purra.
+        rows = self._db.execute(
+            "SELECT payload FROM knowledge_revisions ORDER BY product_id, product_version, revision"
+        ).fetchall()
+        for (raw,) in rows:
+            package = decode(raw)
+            key = (package.product_id, package.product_version)
+            history = self._history.get(key, [])
+            if package.revision > (history[-1].revision if history else 0):
+                super().publish_approved(package, approved=True)
+
     def latest(self, product_id, product_version):
         with self._lock:
+            self._refresh_from_db()
             return super().latest(product_id, product_version)
 
     def lease(self, product_id, product_version, revision=None):
         with self._lock:
+            self._refresh_from_db()
             return super().lease(product_id, product_version, revision)
 
     def close(self):
