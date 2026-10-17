@@ -143,3 +143,23 @@ def test_17_invalid_browser_context_rejected():
     import pytest
     with pytest.raises(ValueError):
         respond(invalid, state)
+
+
+def test_17_followup_uses_original_topic_and_current_inventory():
+    class CapturingBrain:
+        def __init__(self):
+            self.questions = []
+        async def complete(self, system, user):
+            import json
+            self.questions.append(json.loads(user)["question"])
+            return '{"selection":"mock-layout"}'
+    brain = CapturingBrain()
+    state = LocalState(model=brain)
+    first = respond(request("follow", "How do I edit layout blocks?"), state)
+    assert first["status"] == "grounded"
+    next_payload = request("follow", "What about that step?")
+    next_payload["context"] = first["context"]
+    next_result = respond(next_payload, state)
+    assert next_result["status"] == "grounded"
+    assert next_result["context"]["last_question"] == first["context"]["last_question"]
+    assert "Previous user question:" in brain.questions[1]
