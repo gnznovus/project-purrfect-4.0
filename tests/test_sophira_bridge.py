@@ -113,3 +113,25 @@ def test_legacy_lease_checksum_remains_unchanged():
     encoded = encode(old)
     assert '"entry_revision"' not in encoded
     assert decode(encoded).digest == old.digest
+
+
+def test_revision_four_fixture_generates_correct_sources_without_mutating_origin():
+    from pathlib import Path
+    from purrfect.sophira_storage import decode
+    fixture = Path(__file__).parent / "fixtures" / "sophira-mock-rev4.json"
+    package = decode(fixture.read_text())
+    product = RegisteredProduct(
+        "mock-translation", "1.0.0", "plugin", ("translation",),
+        (Evidence("translation-edit", "Edit", "bundled", "mock-translation://docs/edit",
+                  "mock-translation", "1.0.0"),
+         Evidence("translation-troubleshoot-access", "Access", "bundled",
+                  "mock-translation://docs/troubleshoot/access", "mock-translation", "1.0.0")),
+    )
+    overridden = effective_knowledge(SiteKnowledge((product,)), [json.loads(encode(package))])
+    sources = {e.id: e.source for e in overridden.products["mock-translation"].evidence}
+    assert sources == {
+        "translation-edit": "mock-translation-1.0.0://docs/edit-r2",
+        "translation-troubleshoot-access":
+            "mock-translation-1.0.0://docs/troubleshoot/access-r2",
+    }
+    assert package.items[1].source == "mock-translation://docs/troubleshoot/access"
