@@ -18,7 +18,7 @@ services:
   wp_b:
     build: .
     ports:
-      - "8085:80"
+      - "8083:80"
     environment:
       WORDPRESS_DB_HOST: db_b
       WORDPRESS_DB_USER: wordpress
