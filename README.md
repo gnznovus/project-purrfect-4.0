@@ -17,6 +17,22 @@ The user interacts with Child/Purra. Products advertise active capabilities and 
 
 Knowledge is approved by a trusted operator through the CLI; the `--approved` flag **is not** an authenticated human approval workflow. Product knowledge and Sophira package revisions are separate: knowledge entries can carry individual `Revision N` metadata and change notes. Source identifiers are formatted for display, while stored original sources remain stable.
 
+## Approved character identities — Goal 1.11 (planned)
+
+The public-facing character names are **Purr** (assistant/commander), **Sophia** (knowledge keeper), and **Aurora** (execution worker). These replace the earlier *Purra* and *Sophira* display names; Aurora is unchanged. The names below distinguish **approved display identity** from **currently implemented technical identity**:
+
+| Display name | Existing internal identifiers (unchanged) | Role |
+| --- | --- | --- |
+| **Purr** | `purra`, `Purra` in current code/UI | Assistant and commander |
+| **Sophia** | `sophira`, `Sophira` in current code/UI | Shared knowledge |
+| **Aurora** | `aurora` | Execution worker; not part of the Child health chain |
+
+**Implementation status:** the names above are an approved presentation decision, **not** a completed UI rename. Existing screenshots, logs, executable commands, and UI labels may still use Purra/Sophira until Goal 1.11 is implemented and visually accepted. Machine identifiers, Python imports, Docker service names, database keys, environment variables, APIs, URLs and WordPress hooks retain their existing contracts. Do not globally search-and-replace technical identities.
+
+**Goal 1.11 — Identity & UX Polish:** inventory user-visible strings and asset references first; apply a consistent display-name mapping and approved artwork; verify chat, knowledge, health, admin feedback, responsive layout, and keyboard/disabled states. Update the documented implemented state **after** real UI acceptance. No new intelligence, execution, sync architecture or feature work belongs in this slice.
+
+Artwork replacement is permitted once the new assets are supplied and approved; this documentation update does **not** assert they have been deployed.
+
 ## Development and tests
 
 From the repository root (PowerShell, Python 3.14 installed):
