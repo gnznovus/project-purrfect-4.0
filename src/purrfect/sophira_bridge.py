@@ -39,7 +39,7 @@ def sync_request(client: SophiraClient, request: dict) -> dict:
 
 
 def vars_for_item(item):
-    return {"id": item.id, "content": item.content, "source": item.source}
+    return {"id": item.id, "content": item.content, "source": item.source, **({"entry_revision": item.entry_revision, "change_note": item.change_note} if item.entry_revision is not None else {})}
 
 
 def effective_knowledge(knowledge: SiteKnowledge, raw: object) -> SiteKnowledge:
@@ -70,7 +70,17 @@ def effective_knowledge(knowledge: SiteKnowledge, raw: object) -> SiteKnowledge:
         for item in lease.items:
             previous = existing.get(item.id)
             existing[item.id] = Evidence(item.id, previous.title if previous else item.id,
-                                         item.content, item.source, product.id, product.version,
+                                         item.content, versioned_source(item.source, product.version, item.entry_revision), product.id, product.version,
                                          previous.tags if previous else ())
         products.append(replace(product, evidence=tuple(existing.values())))
     return SiteKnowledge(products, knowledge.wordpress)
+
+
+def versioned_source(source: str, product_version: str, entry_revision: int | None) -> str:
+    """Display-only provenance. Original source remains stable in leased knowledge."""
+    if entry_revision is None:
+        return source
+    if "://" not in source:
+        return f"{source}-r{entry_revision}"
+    scheme, path = source.split("://", 1)
+    return f"{scheme}-{product_version}://{path}-r{entry_revision}"
