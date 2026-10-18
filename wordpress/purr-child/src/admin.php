@@ -257,11 +257,8 @@ add_action('admin_menu', static function (): void {
         'purr-child-admin', 'purr_child_render_admin', 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#a7aaad" d="M4.3 10.6 3 2.3l6 3.5a10 10 0 0 1 6 0l6-3.5-1.3 8.3a8.8 8.8 0 0 1-2 8.2C16.1 20.3 14.4 21 12 21s-4.1-.7-5.7-2.2a8.8 8.8 0 0 1-2-8.2ZM8.3 13a1.4 1.4 0 1 0 0 .1Zm8.8 0a1.4 1.4 0 1 0 0 .1ZM10 16.3l2 1.7 2-1.7-2-1.1Z"/></svg>'));
 });
 
-add_action('wp_ajax_purr_child_admin_status', static function (): void {
-    check_ajax_referer('purr_child_admin', 'nonce');
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('Permission denied', 403);
-    }
+/** Re-check version statuses after a service recovery without updating leases. */
+function purr_child_admin_refresh_dependency_status(): void {
     // Health recovery must also refresh the read-only version snapshot.
     // Keep lease synchronization separate: this cannot modify cached knowledge.
     $previous = get_option('purr_child_network_health', []);
@@ -278,6 +275,14 @@ add_action('wp_ajax_purr_child_admin_status', static function (): void {
         // Retry failed checks on their existing heartbeat grid; no new scheduler.
         purr_child_heartbeat_tick(null, ['knowledge_versions']);
     }
+}
+
+add_action('wp_ajax_purr_child_admin_status', static function (): void {
+    check_ajax_referer('purr_child_admin', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Permission denied', 403);
+    }
+    purr_child_admin_refresh_dependency_status();
     wp_send_json_success(purr_child_admin_data());
 });
 
