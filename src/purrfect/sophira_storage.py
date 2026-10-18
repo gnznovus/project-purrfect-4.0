@@ -16,7 +16,7 @@ def encode(package: KnowledgePackage) -> str:
         "product_id": package.product_id, "product_version": package.product_version,
         "revision": package.revision, "contract_version": package.contract_version,
         "digest": package.digest,
-        "items": [{"id": item.id, "content": item.content, "source": item.source}
+        "items": [{"id": item.id, "content": item.content, "source": item.source, **({"entry_revision": item.entry_revision, "change_note": item.change_note} if item.entry_revision is not None else {})}
                   for item in package.items],
     }, sort_keys=True)
 
