@@ -8,6 +8,14 @@
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const date = v => v ? new Date(v * 1000).toLocaleString() : 'Not checked';
   const productLabel = id => String(id).split(/[-_]+/).filter(Boolean).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  const knowledgeSource = item => {
+    const source = String(item.source || '');
+    const revision = item.revision;
+    const version = String(item.product_version || '');
+    if (!Number.isInteger(revision) || revision < 1 || !version || !source.includes('://')) return source;
+    const index = source.indexOf('://');
+    return source.slice(0,index) + '-' + version + source.slice(index) + '-r' + revision;
+  };
   const badge = (state, version, verified = true, knowledge = false) => {
     if (!verified) return '<span class="purr-status is-unknown">Unable to verify</span>';
     if (state === 'update_available') return '<span class="purr-status is-warn">Newer version available: ' + esc(version == null ? 'unknown' : (knowledge ? 'Revision ' + version : version)) + '</span>';
@@ -39,8 +47,7 @@
     const kv = !!knowledge.checked_at && (data.heartbeat?.knowledge_versions?.failures ?? 0) === 0;
     const regRows = Array.isArray(registry.rows) ? registry.rows : [];
     const regTable = regRows.length ? table(['Product', 'Installed', 'Version status'], regRows.map(row =>
-      '<tr><td><div class="purr-item-name">' + esc(row.product_id) + '</div><div class="purr-item-sub">' +
-      esc(row.kind) + ' · ' + esc(row.key) + '</div></td><td class="purr-monovalue">' +
+      '<tr><td><div class="purr-item-name">' + esc(productLabel(row.product_id)) + '</div></td><td class="purr-monovalue">' +
       esc(row.installed) + '</td><td>' + badge(row.status, row.latest, rv) + '</td></tr>').join('')) :
       '<div class="purr-empty">No verified registry versions yet. Run Check Versions to inspect active products.</div>';
     els.registry.innerHTML = head('Product Registry',
@@ -67,7 +74,7 @@
         tree += '<details class="purr-category" open><summary>' + esc(category) + '</summary>' +
           table(['Knowledge entry','Local revision','Version status'], entries.map(item =>
           '<tr><td><div class="purr-item-name">' + esc(item.id) + '</div><div class="purr-item-sub">' +
-          esc(item.source) + '</div></td><td class="purr-knowledge-rev">' +
+          esc(knowledgeSource(item)) + '</div></td><td class="purr-knowledge-rev">' +
           esc(item.revision != null ? 'Revision ' + item.revision : (item.origin === 'built_in' ? productLabel(name) + ' Built-in' : item.origin === 'not_synchronized' ? 'Not synchronized' : 'Unversioned lease')) + '</td><td>' +
           badge(item.status,item.latest_revision,kv,true) +
           '</td></tr>').join('')) + '</details>';
