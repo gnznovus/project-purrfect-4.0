@@ -11,10 +11,10 @@ docker compose @compose --profile brain up -d --no-recreate db_b wp_b clock_b
 docker compose @compose ps
 ```
 
-Open http://localhost:8085/wp-admin/install.php and perform a **fresh Site B setup** with distinct local test credentials. Do not import Site A data. Alternatively, if you prefer WP-CLI, use:
+Open http://localhost:8083/wp-admin/install.php and perform a **fresh Site B setup** with distinct local test credentials. Do not import Site A data. Alternatively, if you prefer WP-CLI, use:
 
 ```powershell
-docker compose @compose --profile tools run --rm cli_b core install --url=http://localhost:8085 --title="Purrfect Lab B" --admin_user=lab_b_admin --admin_email=lab-b@example.test --prompt=admin_password
+docker compose @compose --profile tools run --rm cli_b core install --url=http://localhost:8083 --title="Purrfect Lab B" --admin_user=lab_b_admin --admin_email=lab-b@example.test --prompt=admin_password
 docker compose @compose --profile tools run --rm cli_b plugin activate purr-child mock-translation
 ```
 
