@@ -176,7 +176,7 @@ function purr_child_admin_update_registry(): bool {
 
 function purr_child_admin_run_check(string $component): bool {
     purr_child_heartbeat_dirty($component);
-    $result = purr_child_heartbeat_tick();
+    $result = purr_child_heartbeat_tick(null, [$component]);
     return ($result[$component] ?? null) === 'success';
 }
 
