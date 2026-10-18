@@ -157,11 +157,34 @@ class SophiraCatalog:
                     elif old is not None:
                         if item.change_note is None:
                             raise ValueError("Changed knowledge needs approved change note")
-                        if old.entry_revision is not None and item.entry_revision != old.entry_revision + 1:
+                        previous_revision = self.entry_history(package.product_id, package.product_version, item.id)
+                        expected = previous_revision[-1]["entry_revision"] + 1 if previous_revision else 1
+                        if item.entry_revision != expected:
                             raise ValueError("Entry revision must increment once")
                 elif old is not None and old.entry_revision is not None:
                     raise ValueError("Cannot remove existing entry revision metadata")
         history.append(package)
+
+    def entry_history(self, product_id: str, product_version: str, entry_id: str) -> tuple[dict, ...]:
+        """Immutable per-entry changelog, including revisions predating metadata."""
+        revisions = []
+        previous = None
+        number = 0
+        for package in self._history.get((product_id, product_version), []):
+            item = next((i for i in package.items if i.id == entry_id), None)
+            if item is None:
+                previous = None
+                continue
+            if previous is None or (item.content, item.source) != (previous.content, previous.source):
+                number += 1
+                revisions.append({
+                    "entry_revision": number,
+                    "package_revision": package.revision,
+                    "change_note": item.change_note or "Legacy approved knowledge; reason not recorded",
+                    "source": item.source,
+                })
+            previous = item
+        return tuple(revisions)
 
     def latest(self, product_id: str, product_version: str) -> int | None:
         history = self._history.get((product_id, product_version), [])
