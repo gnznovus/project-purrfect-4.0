@@ -21,6 +21,24 @@ Knowledge is approved by a trusted operator through the CLI; the `--approved` fl
 
 Improve the existing WordPress administration and chat experience without expanding core functionality. Focus on visual consistency, clear status and feedback, responsive behavior, keyboard accessibility, and real-browser acceptance. Keep functionality and existing service contracts stable; document confirmed results after validation.
 
+## Fresh Windows clone — Goal 1.12 bootstrap
+
+Requires Git, Docker Desktop with Linux containers, network access for Docker images/Ollama model downloads, and available local ports (8084 for Site A; 8083 if Site B is enabled). A dedicated GPU is **not required**; CPU inference is slower. This is a local lab, not a production deployment.
+
+From a new checkout:
+
+```powershell
+git clone https://github.com/gnznovus/project-purrfect-4.0.git
+cd project-purrfect-4.0
+.\bootstrap.ps1
+```
+
+Setup brings up Site A, Ollama, Purr and Sophia, downloads the `llama3.2:3b` model if needed, verifies a real Ollama response, seeds only an **empty** Sophia lab catalog with the approved **mock/demo fixtures**, installs WordPress interactively on first run, activates the example products, and waits for the existing heartbeat. Follow the password prompt for the local WordPress admin account. The same command can be rerun without deleting volumes or recreating accounts.
+
+Use `.\bootstrap.ps1 -SiteB` to provision both independent WordPress sites. On failure, read the console diagnostic and rerun; never reset volumes to recover. A model download may take time and inference on CPU may be slower. The script exits with an error if inference or initialization fails; it does not silently claim a working Brain. WordPress state and the Sophia catalog are local to each laptop and are not cloned from another machine. To develop/test Python directly outside Docker, install Python 3.14 as described below.
+
+The bootstrap defaults Purr to Ollama mode for lab containers it starts; it does not install Ollama on Windows or expose the internal `purra:8765` port. Do not run the script on a shared production WordPress instance.
+
 ## Development and tests
 
 From the repository root (PowerShell, Python 3.14 installed):
