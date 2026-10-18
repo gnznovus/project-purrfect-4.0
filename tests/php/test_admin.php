@@ -60,6 +60,8 @@ verify($versions['translation-edit']['latest_revision'] === 2, 'Translation entr
 verify($versions['translation-troubleshoot-access']['latest_revision'] === 1, 'Access should start at r1');
 verify($versions['translation-troubleshoot-access']['origin'] === 'built_in',
     'Bundled access entry should use product Built-in label');
+verify($versions['translation-edit']['product_version'] === '1.0.0',
+    'Knowledge entry should carry source product version for display');
 verify($versions['translation-edit']['origin'] === 'lease',
     'Leased translation entry must not be marked Built-in');
 verify($versions['translation-troubleshoot-access']['status'] === 'update_available',
