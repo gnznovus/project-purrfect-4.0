@@ -401,6 +401,30 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
     state = LocalState(model=model, sophira=sophira)
 
     class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            path = urlparse(self.path).path
+            if path == "/v1/health":
+                result = {"service": "purra", "status": "healthy"}
+                code = 200
+            elif path == "/v1/knowledge/health":
+                healthy = state.sophira is not None and not _sophira_fault_active()
+                if healthy:
+                    try:
+                        state.sophira.latest("__purrfect_health_probe__", "0")
+                    except (OSError, ValueError):
+                        healthy = False
+                result = {"service": "sophira", "status": "healthy" if healthy else "unavailable"}
+                code = 200 if healthy else 503
+            else:
+                self.send_error(404)
+                return
+            body = json.dumps(result).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_POST(self):
             path = urlparse(self.path).path
             if path not in ("/v1/chat", "/v1/knowledge/sync"):
