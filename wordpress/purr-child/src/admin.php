@@ -123,7 +123,7 @@ function purr_child_check_knowledge_versions(): bool {
             $prior = $local_items[$item['id']] ?? null;
             $newer = $prior === null || $prior !== $item;
             $rows[] = [
-                'product_id' => $pid, 'id' => $item['id'],
+                'product_id' => $pid, 'product_version' => $product['version'], 'id' => $item['id'],
                 'source' => $item['source'],
                 'revision' => $prior['entry_revision'] ?? null,
                 'origin' => $prior !== null ? 'lease' : (isset($bundled[$pid][$item['id']]) ? 'built_in' : 'not_synchronized'),
@@ -134,7 +134,7 @@ function purr_child_check_knowledge_versions(): bool {
         }
         foreach ($local_items as $item) {
             $rows[] = [
-                'product_id' => $pid, 'id' => $item['id'], 'source' => $item['source'],
+                'product_id' => $pid, 'product_version' => $product['version'], 'id' => $item['id'], 'source' => $item['source'],
                 'revision' => $item['entry_revision'] ?? null, 'origin' => 'lease', 'latest_revision' => null,
                 'status' => 'removed_upstream',
             ];
