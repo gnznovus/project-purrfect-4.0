@@ -11,6 +11,8 @@ add_action('purrfect/heartbeat_tick', static function (): void {
 function purr_child_dirty_on_change(): void {
     purr_child_heartbeat_dirty('registry');
     purr_child_heartbeat_dirty('knowledge');
+    purr_child_heartbeat_dirty('registry_versions');
+    purr_child_heartbeat_dirty('knowledge_versions');
 }
 foreach ([
     'activated_plugin', 'deactivated_plugin', 'switch_theme',
