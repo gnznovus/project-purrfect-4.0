@@ -4,6 +4,8 @@
   if (!cfg) return;
   let data = cfg.initial || {};
   let busy = false;
+  let polling = false;
+  const knowledgeAvailable = () => data.network?.purra?.status === 'healthy' && data.network?.sophira?.status === 'healthy';
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const date = v => v ? new Date(v * 1000).toLocaleString() : 'Not checked';
@@ -26,9 +28,9 @@
     if (state !== 'up_to_date') return '<span class="purr-status is-unknown">Not checked</span>';
     return '<span class="purr-status">Up to date</span>';
   };
-  const controls = (check, update) => '<div class="purr-actions">' +
-    '<button type="button" class="purr-action" data-operation="' + check + '"><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
-    '<button type="button" class="purr-action is-primary" data-operation="' + update + '"><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
+  const controls = (check, update, disabled = false) => '<div class="purr-actions">' +
+    '<button type="button" class="purr-action" data-operation="' + check + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
+    '<button type="button" class="purr-action is-primary" data-operation="' + update + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
   const head = (title, description, actions) => '<div class="purr-panel-head"><div><h2>' +
     title + '</h2><p>' + description + '</p></div>' + (actions || '') + '</div>';
   const table = (columns, content) => '<div class="purr-table-wrap"><table class="purr-data-table"><thead><tr>' +
@@ -55,6 +57,7 @@
       controls('check_registry', 'update_registry')) +
       '<p class="purr-checkline">Last version check: ' + esc(date(registry.checked_at)) + '</p>' +
       card('Registered products', regTable, regRows.length + ' active signals');
+    const available = knowledgeAvailable();
     const items = Array.isArray(knowledge.rows) ? knowledge.rows : [];
     const products = new Map();
     for (const item of items) {
@@ -76,14 +79,15 @@
           '<tr><td><div class="purr-item-name">' + esc(item.id) + '</div><div class="purr-item-sub">' +
           esc(knowledgeSource(item)) + '</div></td><td class="purr-knowledge-rev">' +
           esc(item.revision != null ? 'Revision ' + item.revision : (item.origin === 'built_in' ? productLabel(name) + ' Built-in' : item.origin === 'not_synchronized' ? 'Not synchronized' : 'Unversioned lease')) + '</td><td>' +
-          badge(item.status,item.latest_revision,kv,true) +
+          (available ? badge(item.status,item.latest_revision,kv,true) : '<span class="purr-status is-unknown">Last verified status</span>') +
           '</td></tr>').join('')) + '</details>';
       }
       tree += '</div></details>';
     }
     els.knowledge.innerHTML = head('Knowledge Library',
       'Approved Sophira entries · independent revisions and read-only version checks',
-      controls('check_knowledge', 'sync_knowledge')) +
+      controls('check_knowledge', 'sync_knowledge', !available)) +
+      (!available ? '<p class="purr-dependency-note">Sophira is unavailable or not yet verified. Knowledge version checks and updates are paused; local knowledge remains accessible. Controls resume automatically on recovery.</p>' : '') +
       '<p class="purr-checkline">Last version check: ' + esc(date(knowledge.checked_at)) + '</p>' +
       card('Knowledge explorer', '<div class="purr-tree">' + (tree ||
       '<div class="purr-empty">No verified knowledge versions yet. Use Check Versions to inspect the library.</div>') +
@@ -119,6 +123,7 @@
   }
   async function operate(operation, button) {
     if (busy) return;
+    if ((operation === 'check_knowledge' || operation === 'sync_knowledge') && !knowledgeAvailable()) return;
     busy = true;
     button.disabled = true;
     const label = button.innerHTML;
@@ -129,7 +134,15 @@
       const body = new URLSearchParams({ action:'purr_child_admin_action', nonce:cfg.nonce, operation });
       const response = await fetch(cfg.endpoint,{ method:'POST', credentials:'same-origin', body });
       const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.data?.message || (typeof result.data === 'string' ? result.data : 'Request failed'));
+      if (!response.ok || !result.success) {
+        if (result.data?.reason === 'dependency_unavailable') {
+          data = result.data.data;
+          draw();
+          feedback.textContent = 'Sophira is unavailable. Knowledge actions are paused.';
+          return;
+        }
+        throw new Error(result.data?.message || (typeof result.data === 'string' ? result.data : 'Request failed'));
+      }
       data = result.data;
       draw();
       feedback.textContent = operation === 'health_check' ? 'Network health checked.' :
@@ -142,6 +155,32 @@
       if (button.isConnected) { button.disabled = false; button.innerHTML = label; }
     }
   }
+  async function refreshStatus() {
+    if (polling || busy || document.hidden) return;
+    polling = true;
+    try {
+      const body = new URLSearchParams({action:'purr_child_admin_status',nonce:cfg.nonce});
+      const response = await fetch(cfg.endpoint,{method:'POST',credentials:'same-origin',body});
+      const result = await response.json();
+      if (response.ok && result.success) {
+        const previous = knowledgeAvailable();
+        data = result.data;
+        if (previous !== knowledgeAvailable()) {
+          draw();
+          feedback.classList.remove('is-error');
+          feedback.textContent = knowledgeAvailable()
+            ? 'Sophira has recovered. Knowledge controls are available.'
+            : 'Sophira is unavailable. Knowledge controls are paused.';
+        } else if (document.querySelector('[data-purr-tab="settings"].is-active')) draw();
+      }
+    } catch (_) {
+      // A polling failure cannot invalidate the last-good lease or enable controls.
+      data.network = {...data.network, sophira:{status:'unavailable'},purra:{status:'unavailable'}};
+      draw();
+    } finally { polling = false; }
+  }
+  setInterval(refreshStatus, 15000);
+  refreshStatus();
   document.addEventListener('click', event => {
     const btn = event.target.closest('[data-operation]');
     if (btn) return void operate(btn.dataset.operation,btn);
