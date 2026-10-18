@@ -17,7 +17,7 @@
   status.hidden = true;
   log.after(status);
   const stages = [
-    'Request sent to Purra.',
+    'Request sent to Purr.',
     'Waiting for the local Brain to respond...',
     'Still waiting for the response; local inference may take a moment...',
   ];
@@ -56,7 +56,7 @@
       if (!response.ok || !packet.success) throw new Error(
         typeof packet.data === 'string' ? packet.data : 'Request failed');
       const data = packet.data;
-      append('Purra', data.message);
+      append('Purr', data.message);
       if (data.routing) append('Routing', data.routing);
       if (data.interaction?.options?.length) {
         for (const option of data.interaction.options) {
