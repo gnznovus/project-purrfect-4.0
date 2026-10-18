@@ -92,6 +92,7 @@
       '<p>Last checked: ' + escapeHtml(checked(health)) + '</p>' +
       serviceRows + '<h3>Heartbeat history</h3>' + heartbeats +
       '<h3>Integrity & Recovery</h3>' +
+      '<p><strong>Bootstrap SHA-256 (diagnostic only):</strong> <code style="overflow-wrap:anywhere">' + escapeHtml(data.bootstrap_checksum || 'Unavailable') + '</code></p>' +
       '<p>Trusted release checksum: Not available. Integrity is not claimed.</p>' +
       '<p>Rollback: Deferred until verified releases and safe restore support are available.</p>';
   }
@@ -118,7 +119,8 @@
     if (button) operate(button.dataset.operation,button);
     if (event.target.closest('#purr-copy-diagnostics')) {
       const report = JSON.stringify({
-        plugin_version:data.plugin_version,network:data.network,heartbeat:data.heartbeat,
+        plugin_version:data.plugin_version,bootstrap_checksum:data.bootstrap_checksum,
+        network:data.network,heartbeat:data.heartbeat,
         registry:data.registry,knowledge:data.knowledge
       },null,2);
       if (navigator.clipboard?.writeText) {
