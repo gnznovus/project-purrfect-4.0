@@ -43,12 +43,12 @@ add_action('wp_ajax_purr_child_chat', static function (): void {
         ]),
     ]);
     if (is_wp_error($response)) {
-        wp_send_json_error('Local Purra service is unavailable.', 503);
+        wp_send_json_error('Purr service is unavailable.', 503);
     }
     $code = wp_remote_retrieve_response_code($response);
     $body = json_decode(wp_remote_retrieve_body($response), true);
     if ($code !== 200 || !is_array($body)) {
-        wp_send_json_error('Purra did not return a valid response.', 502);
+        wp_send_json_error('Purr did not return a valid response.', 502);
     }
     wp_send_json_success($body);
 });
@@ -58,13 +58,13 @@ add_action('admin_footer', static function (): void {
     if (!current_user_can('manage_options')) {
         return;
     }
-    echo '<div id="purr-child-widget" aria-label="Purr Child assistant"></div>';
+    echo '<div id="purr-child-widget" aria-label="Purr Assistant"></div>';
 });
 
 add_action('admin_enqueue_scripts', static function (): void {
     if (!current_user_can('manage_options')) return;
     wp_enqueue_style('purr-child-widget', plugins_url('../assets/widget.css', __FILE__), [], '0.1.2');
-    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.4', true);
+    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.5', true);
     wp_add_inline_script('purr-child-widget', 'window.purrChildWidget = ' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('purr_child_lab'),
