@@ -68,9 +68,29 @@
         escapeHtml(value.failures ?? 0) + '</td></tr>';
     }
     heartbeats += '</tbody></table>';
+    const health = data.network || {};
+    let serviceRows = '<table class="widefat striped"><thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead><tbody>';
+    for (const id of ['child','purra','sophira']) {
+      const service = health[id] || {};
+      const state = service.status || 'not_checked';
+      const label = state === 'healthy' ? 'Healthy' :
+        state === 'degraded' ? 'Degraded' :
+        state === 'unavailable' ? 'Unavailable' : 'Not checked';
+      const tone = state === 'healthy' ? '#18733b' : '#996800';
+      serviceRows += '<tr><td><strong>' + escapeHtml(id === 'child' ? 'Purr Child' : id === 'purra' ? 'Purra' : 'Sophira') +
+        '</strong></td><td><span style="color:' + tone + '">' + label + '</span></td><td>' +
+        escapeHtml(service.detail || 'Run Health Check') + '</td></tr>';
+    }
+    serviceRows += '</tbody></table>';
     settings.innerHTML = '<h2>Purr Child Settings & Diagnostics</h2><p><strong>Current version:</strong> ' +
-      escapeHtml(data.plugin_version) + '</p><h3>Heartbeat history</h3>' + heartbeats +
-      '<p>Integrity verification and network health probes require trusted reference data; not yet available.</p>';
+      escapeHtml(data.plugin_version) + '</p><h3>AI Network Health</h3>' +
+      '<p><button class="button" data-operation="health_check">Run Health Check</button> ' +
+      '<button class="button" id="purr-copy-diagnostics">Copy Diagnostic Report</button></p>' +
+      '<p>Last checked: ' + escapeHtml(checked(health)) + '</p>' +
+      serviceRows + '<h3>Heartbeat history</h3>' + heartbeats +
+      '<h3>Integrity & Recovery</h3>' +
+      '<p>Trusted release checksum: Not available. Integrity is not claimed.</p>' +
+      '<p>Rollback: Deferred until verified releases and safe restore support are available.</p>';
   }
   async function operate(op, button) {
     const old = button.textContent;
@@ -93,6 +113,15 @@
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-operation]');
     if (button) operate(button.dataset.operation,button);
+    if (event.target.closest('#purr-copy-diagnostics')) {
+      const report = JSON.stringify({
+        plugin_version:data.plugin_version,network:data.network,heartbeat:data.heartbeat,
+        registry:data.registry,knowledge:data.knowledge
+      },null,2);
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(report).catch(() => window.prompt('Copy report:',report));
+      } else window.prompt('Copy report:',report);
+    }
   });
   for (const link of document.querySelectorAll('[data-purr-tab]')) {
     link.addEventListener('click', event => {
