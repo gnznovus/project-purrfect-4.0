@@ -29,8 +29,8 @@
     return '<span class="purr-status">Up to date</span>';
   };
   const controls = (check, update, disabled = false) => '<div class="purr-actions">' +
-    '<button type="button" class="purr-action" data-operation="' + check + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
-    '<button type="button" class="purr-action is-primary" data-operation="' + update + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
+    '<button type="button" class="purr-action" data-operation="' + check + '" ' + (disabled ? 'disabled title="Sophia is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
+    '<button type="button" class="purr-action is-primary" data-operation="' + update + '" ' + (disabled ? 'disabled title="Sophia is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
   const head = (title, description, actions) => '<div class="purr-panel-head"><div><h2>' +
     title + '</h2><p>' + description + '</p></div>' + (actions || '') + '</div>';
   const table = (columns, content) => '<div class="purr-table-wrap"><table class="purr-data-table"><thead><tr>' +
@@ -85,15 +85,15 @@
       tree += '</div></details>';
     }
     els.knowledge.innerHTML = head('Knowledge Library',
-      'Approved Sophira entries · independent revisions and read-only version checks',
+      'Approved Sophia entries · independent revisions and read-only version checks',
       controls('check_knowledge', 'sync_knowledge', !available)) +
-      (!available ? '<p class="purr-dependency-note">Sophira is unavailable or not yet verified. Knowledge version checks and updates are paused; local knowledge remains accessible. Controls resume automatically on recovery.</p>' : '') +
+      (!available ? '<p class="purr-dependency-note">Sophia is unavailable or not yet verified. Knowledge version checks and updates are paused; local knowledge remains accessible. Controls resume automatically on recovery.</p>' : '') +
       '<p class="purr-checkline">Last version check: ' + esc(date(knowledge.checked_at)) + '</p>' +
       card('Knowledge explorer', '<div class="purr-tree">' + (tree ||
       '<div class="purr-empty">No verified knowledge versions yet. Use Check Versions to inspect the library.</div>') +
       '</div>', items.length + ' entries');
     const network = data.network || {};
-    const nodes = [['child','Purr Child'],['purra','Purra'],['sophira','Sophira']];
+    const nodes = [['child','Purr Assistant'],['purra','Purr'],['sophira','Sophia']];
     const healthCards = nodes.map(([key,label]) => {
       const node = network[key] || {};
       return '<div class="purr-health-node"><div class="purr-health-name">' + label + '</div>' +
@@ -108,7 +108,7 @@
       'Local plugin information and independent AI network health checks',
       '<div class="purr-actions"><button type="button" class="purr-action is-primary" data-operation="health_check">Run Health Check</button>' +
       '<button type="button" class="purr-action" id="purr-copy-diagnostics">Copy Diagnostics</button></div>') +
-      '<div class="purr-stat-grid"><div class="purr-stat"><div class="purr-stat-label">Purr Child version</div>' +
+      '<div class="purr-stat-grid"><div class="purr-stat"><div class="purr-stat-label">Purr Assistant version</div>' +
       '<div class="purr-stat-value">' + esc(data.plugin_version || 'Unknown') + '</div></div>' +
       '<div class="purr-stat"><div class="purr-stat-label">Last network check</div>' +
       '<div class="purr-stat-value" style="font-size:16px">' + esc(date(network.checked_at)) + '</div></div></div>' +
@@ -138,7 +138,7 @@
         if (result.data?.reason === 'dependency_unavailable') {
           data = result.data.data;
           draw();
-          feedback.textContent = 'Sophira is unavailable. Knowledge actions are paused.';
+          feedback.textContent = 'Sophia is unavailable. Knowledge actions are paused.';
           return;
         }
         throw new Error(result.data?.message || (typeof result.data === 'string' ? result.data : 'Request failed'));
@@ -169,8 +169,8 @@
           draw();
           feedback.classList.remove('is-error');
           feedback.textContent = knowledgeAvailable()
-            ? 'Sophira has recovered. Knowledge controls are available.'
-            : 'Sophira is unavailable. Knowledge controls are paused.';
+            ? 'Sophia has recovered. Knowledge controls are available.'
+            : 'Sophia is unavailable. Knowledge controls are paused.';
         } else if (document.querySelector('[data-purr-tab="settings"].is-active')) draw();
       }
     } catch (_) {
