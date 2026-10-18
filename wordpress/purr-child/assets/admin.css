@@ -14,3 +14,5 @@
 #purr-admin-feedback{min-height:0}#purr-admin-feedback:not(:empty){margin:12px 0;padding:11px 16px;border-radius:9px;background:#fff;border:1px solid var(--purr-line);color:#6b4c55;font-weight:600}#purr-admin-feedback.is-error{background:#fff0f0;color:#ae3444}
 @media(max-width:800px){.purr-console{margin-right:8px}.purr-console-header{padding:22px 18px}.purr-header-version{display:none}.purr-admin-panel{padding:20px 13px}.purr-panel-head{align-items:flex-start}.purr-health-grid,.purr-stat-grid{grid-template-columns:1fr}.purr-table-wrap{overflow-x:auto}.purr-data-table{min-width:480px}.purr-console-tabs{padding:0 8px}}
 @media(prefers-reduced-motion:reduce){.purr-console *{transition:none!important}}
+
+.purr-dependency-note{color:#786c71;font-size:12px;margin:0 0 17px;line-height:1.6;padding:10px 14px;border-left:3px solid #dcc5c8;background:#fff;border-radius:0 7px 7px 0}
