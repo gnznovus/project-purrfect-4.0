@@ -105,6 +105,10 @@ function purr_child_register_heartbeat(array $components): array {
         'interval' => 300,
         'callback' => 'purr_child_refresh_registry',
     ];
+    $components['knowledge'] = [
+        'interval' => 21600,
+        'callback' => 'purr_child_sync_knowledge',
+    ];
     $components['registry_versions'] = [
         'interval' => 21600,
         'callback' => 'purr_child_check_registry_versions',
@@ -112,10 +116,6 @@ function purr_child_register_heartbeat(array $components): array {
     $components['knowledge_versions'] = [
         'interval' => 21600,
         'callback' => 'purr_child_check_knowledge_versions',
-    ];
-    $components['knowledge'] = [
-        'interval' => 21600,
-        'callback' => 'purr_child_sync_knowledge',
     ];
     return $components;
 }
