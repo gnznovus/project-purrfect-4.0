@@ -61,3 +61,55 @@ def test_development_outage_switch_is_opt_in_and_only_a_marker(monkeypatch, tmp_
     assert _sophira_fault_active() is True
     marker.unlink()
     assert _sophira_fault_active() is False
+
+
+def test_individual_entry_revisions_and_change_notes_are_source_bound():
+    from purrfect.sophira_storage import decode
+    from purrfect.sophira_bridge import versioned_source
+    catalog = SophiraCatalog()
+    first = pkg(1, KnowledgeItem("a", "original", "mock-translation://docs/troubleshoot/access",
+                                 1, "Initial approved entry"),
+                KnowledgeItem("b", "unchanged", "mock-translation://docs/other", 1,
+                              "Initial approved entry"))
+    catalog.publish_approved(first, approved=True)
+    second = pkg(2, KnowledgeItem("a", "revised", "mock-translation://docs/troubleshoot/access",
+                                  2, "Clarified admin session requirement"),
+                 first.items[1])
+    catalog.publish_approved(second, approved=True)
+    assert versioned_source(second.items[0].source, "1.0.0", second.items[0].entry_revision) == (
+        "mock-translation-1.0.0://docs/troubleshoot/access-r2"
+    )
+    assert versioned_source(second.items[1].source, "1.0.0", second.items[1].entry_revision) == (
+        "mock-translation-1.0.0://docs/other-r1"
+    )
+    assert decode(encode(second)) == second
+    assert effective_knowledge(base(), [json.loads(encode(second))]).products["mock-translation"].evidence[0].source == (
+        "mock-translation-1://docs/troubleshoot/access-r2"
+    )
+    response = sync_request(LocalSophiraClient(catalog), {
+        "products": [{"id": "mock-translation", "version": "1", "revision": 1}]
+    })
+    assert response["updates"][0]["upserts"][0]["entry_revision"] == 2
+    assert response["updates"][0]["upserts"][0]["change_note"] == "Clarified admin session requirement"
+
+
+def test_change_note_required_and_individual_revision_cannot_skip():
+    import pytest
+    catalog = SophiraCatalog()
+    first = pkg(1, KnowledgeItem("a", "old", "mock://a", 1, "Created"))
+    catalog.publish_approved(first, approved=True)
+    with pytest.raises(ValueError, match="change note"):
+        catalog.publish_approved(pkg(2, KnowledgeItem("a", "new", "mock://a", 2)), approved=True)
+    with pytest.raises(ValueError, match="increment"):
+        catalog.publish_approved(pkg(2, KnowledgeItem("a", "new", "mock://a", 3, "changed")), approved=True)
+    with pytest.raises(ValueError, match="Unchanged"):
+        catalog.publish_approved(pkg(2, KnowledgeItem("a", "old", "mock://a", 2, "not changed")), approved=True)
+    assert catalog.latest("mock-translation", "1") == 1
+
+
+def test_legacy_lease_checksum_remains_unchanged():
+    from purrfect.sophira_storage import decode
+    old = pkg(1, KnowledgeItem("a", "legacy", "mock://a"))
+    encoded = encode(old)
+    assert '"entry_revision"' not in encoded
+    assert decode(encoded).digest == old.digest
