@@ -45,7 +45,9 @@ $GLOBALS['remote_package'] = json_decode(file_get_contents($fixture . '3.json'),
 verify(purr_child_knowledge_valid($old), 'Legacy r2 cache must remain valid');
 verify(purr_child_knowledge_valid($GLOBALS['remote_package']), 'Approved r3 package must be valid');
 $GLOBALS['options']['purr_child_registry'] = ['signals' => [
-    ['product_id' => 'mock-translation', 'version' => '1.0.0'],
+    ['product_id' => 'mock-translation', 'version' => '1.0.0', 'knowledge' => [
+        ['id' => 'translation-edit'], ['id' => 'translation-troubleshoot-access']
+    ]],
 ]];
 $GLOBALS['options']['purr_child_knowledge_leases'] = ['mock-translation' => $old];
 verify(purr_child_admin_run_check('knowledge_versions'), 'Read-only heartbeat version check failed');
@@ -56,6 +58,10 @@ $versions = [];
 foreach ($preview['rows'] as $row) $versions[$row['id']] = $row;
 verify($versions['translation-edit']['latest_revision'] === 2, 'Translation entry should remain r2');
 verify($versions['translation-troubleshoot-access']['latest_revision'] === 1, 'Access should start at r1');
+verify($versions['translation-troubleshoot-access']['origin'] === 'built_in',
+    'Bundled access entry should use product Built-in label');
+verify($versions['translation-edit']['origin'] === 'lease',
+    'Leased translation entry must not be marked Built-in');
 verify($versions['translation-troubleshoot-access']['status'] === 'update_available',
     'New access knowledge should be reported');
 verify(get_option('purr_child_knowledge_leases')['mock-translation'] === $old,
