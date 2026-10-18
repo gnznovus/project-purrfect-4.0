@@ -17,9 +17,15 @@ The user interacts with Purr Assistant, whose chat is powered by Purr. Products 
 
 Knowledge is approved by a trusted operator through the CLI; the `--approved` flag **is not** an authenticated human approval workflow. Product knowledge and Sophia package revisions are separate: knowledge entries can carry individual `Revision N` metadata and change notes. Source identifiers are formatted for display, while stored original sources remain stable.
 
-## Goal 1.11 — UI polish
+## Foundation milestone — Goals 1.1–1.12
 
-Improve the existing WordPress administration and chat experience without expanding core functionality. Focus on visual consistency, clear status and feedback, responsive behavior, keyboard accessibility, and real-browser acceptance. Keep functionality and existing service contracts stable; document confirmed results after validation.
+**Foundation prototype implemented; production readiness not claimed.** [PR #3](https://github.com/gnznovus/project-purrfect-4.0/pull/3) (Goal 1.11) and [PR #4](https://github.com/gnznovus/project-purrfect-4.0/pull/4) (Goal 1.12) are merged. Main-branch CI passed after integration ([run](https://github.com/gnznovus/project-purrfect-4.0/actions/runs/39120678187)).
+
+Goal 1.11: The WordPress-facing names are **Purr Assistant**, **Purr**, and **Sophia**, while technical identifiers retain their existing spellings. Accepted UI includes the P2 sidebar/health icon and the U2 open/closed-eye header illustration. Hover closes Purr's eyes; automatic blinking respects the browser's `prefers-reduced-motion` preference. Automated blinking with reduced motion disabled was not separately observed in browser acceptance. Other responsive and accessibility combinations remain unexhaustively tested.
+
+Goal 1.12: A repeatable Windows Docker bootstrap was implemented and merged. It checks Docker, starts the lab, provisions Ollama `llama3.2:3b` with retries, tests real inference, initializes **empty** Sophia demo knowledge, and installs/activates a **new** WordPress lab. CI checks the PowerShell parser and existing suites but **does not run a complete clean-laptop bootstrap**. Fresh-machine end-to-end acceptance, including a second run that preserves state, remains pending.
+
+For a concise milestone inventory and limitations, see [Foundation status](docs/FOUNDATION-STATUS.md).
 
 ## Fresh Windows clone — Goal 1.12 bootstrap
 
@@ -83,7 +89,7 @@ The WordPress admin **Purr Assistant → Control Center** offers:
 
 Knowledge controls pause while Sophia is unavailable; the heartbeat and open admin page detect recovery and automatically refresh read-only version statuses. The floating **Purr** chat widget remains on administrator pages. The chatbox is branded **Purr Assistant**, while messages are spoken by **Purr**. The former full-page **Local Bridge Lab** UI was removed.
 
-The default local Brain mode is deterministic. Ollama routing is optional (`PURRA_BRAIN_MODE=ollama` with a reachable, provisioned Ollama service); it must be validated separately.
+Without the bootstrap, the default local Brain mode is deterministic. The Goal 1.12 bootstrap selects Ollama mode for the containers it starts. Ollama routing is otherwise optional (`PURRA_BRAIN_MODE=ollama` with a reachable, provisioned Ollama service); it must be validated separately.
 
 ### Safety and operations
 
