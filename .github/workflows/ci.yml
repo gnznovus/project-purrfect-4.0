@@ -40,4 +40,6 @@ jobs:
           node --check wordpress/purr-child/assets/chat.js
           node --check wordpress/purr-child/assets/widget.js
       - name: Docker Compose configuration
-        run: docker compose -f wordpress/lab/compose.yaml config --quiet
+        run: |
+          docker compose -f wordpress/lab/compose.yaml config --quiet
+          docker compose -f wordpress/lab/compose.yaml -f wordpress/lab/compose.site-b.yaml config --quiet
