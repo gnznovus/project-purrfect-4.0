@@ -151,16 +151,22 @@ class SophiraCatalog:
             for item in package.items:
                 old = previous.get(item.id)
                 if item.entry_revision is not None:
-                    if old is not None and item.content == old.content and item.source == old.source:
-                        if old.entry_revision is not None and item.entry_revision != old.entry_revision:
+                    history_for_item = SophiraCatalog.entry_history(
+                        self, package.product_id, package.product_version, item.id
+                    )
+                    last_rev = history_for_item[-1]["entry_revision"] if history_for_item else 0
+                    unchanged = (old is not None and
+                                 (item.content, item.source) == (old.content, old.source))
+                    if unchanged:
+                        if item.entry_revision != last_rev:
                             raise ValueError("Unchanged entry cannot advance revision")
-                    elif old is not None:
+                        if old.entry_revision is not None and item.change_note != old.change_note:
+                            raise ValueError("Unchanged entry cannot rewrite its changelog")
+                    else:
+                        if item.entry_revision != last_rev + 1:
+                            raise ValueError("Entry revision must increment once")
                         if item.change_note is None:
                             raise ValueError("Changed knowledge needs approved change note")
-                        previous_revision = SophiraCatalog.entry_history(self, package.product_id, package.product_version, item.id)
-                        expected = previous_revision[-1]["entry_revision"] + 1 if previous_revision else 1
-                        if item.entry_revision != expected:
-                            raise ValueError("Entry revision must increment once")
                 elif old is not None and old.entry_revision is not None:
                     raise ValueError("Cannot remove existing entry revision metadata")
         history.append(package)
