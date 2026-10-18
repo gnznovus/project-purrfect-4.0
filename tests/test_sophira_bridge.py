@@ -48,3 +48,16 @@ def test_invalid_or_incompatible_lease_ignored():
     raw = json.loads(encode(good))
     raw["product_version"] = "2"
     assert effective_knowledge(base(), [raw]).products["mock-translation"].evidence[0].text == "bundled fallback"
+
+
+def test_development_outage_switch_is_opt_in_and_only_a_marker(monkeypatch, tmp_path):
+    from purrfect.local_api import _sophira_fault_active
+    monkeypatch.delenv("SOPHIRA_DEV_FAULT_FILE", raising=False)
+    assert _sophira_fault_active() is False
+    marker = tmp_path / "sophira-offline"
+    monkeypatch.setenv("SOPHIRA_DEV_FAULT_FILE", str(marker))
+    assert _sophira_fault_active() is False
+    marker.touch()
+    assert _sophira_fault_active() is True
+    marker.unlink()
+    assert _sophira_fault_active() is False
