@@ -4,7 +4,8 @@
   let data = cfg.initial;
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const status = (row, version) => {
+  const status = (row, version, verified = true) => {
+    if (!verified) return '<span style="color:#996800">Unable to verify (last known status)</span>';
     if (row.status === 'update_available') {
       return '<span style="color:#996800">Newer version available: ' +
         escapeHtml(version == null ? 'unversioned' : version) + '</span>';
@@ -23,14 +24,16 @@
   const settings = document.getElementById('purr-admin-settings');
   function draw() {
     const r = data.registry || {};
+    const registryVerified = !!r.checked_at && (data.heartbeat?.registry_versions?.failures ?? 0) === 0;
     registry.innerHTML = '<h2>Product Registry</h2>' +
       buttons('check_registry','update_registry') +
       '<p>Last checked: ' + escapeHtml(checked(r)) + '</p>' +
       (!r.rows ? empty : '<table class="widefat striped"><thead><tr><th>Product</th><th>Installed</th><th>Status</th></tr></thead><tbody>' +
       r.rows.map(row => '<tr><td>' + escapeHtml(row.product_id) + '</td><td>' +
-      escapeHtml(row.installed) + '</td><td>' + status(row,row.latest) + '</td></tr>').join('') +
+      escapeHtml(row.installed) + '</td><td>' + status(row,row.latest,registryVerified) + '</td></tr>').join('') +
       '</tbody></table>');
     const k = data.knowledge || {};
+    const knowledgeVerified = !!k.checked_at && (data.heartbeat?.knowledge_versions?.failures ?? 0) === 0;
     const products = {};
     for (const item of k.rows || []) {
       (products[item.product_id] ||= []).push(item);
@@ -50,7 +53,7 @@
         for (const item of entries) {
           tree += '<tr><td>' + escapeHtml(item.id) + '</td><td>' +
             escapeHtml(item.revision == null ? 'Legacy' : 'r'+item.revision) + '</td><td>' +
-            status(item,item.latest_revision == null ? null : 'r'+item.latest_revision) + '</td></tr>';
+            status(item,item.latest_revision == null ? null : 'r'+item.latest_revision,knowledgeVerified) + '</td></tr>';
         }
         tree += '</tbody></table></details>';
       }
