@@ -2,7 +2,7 @@
 /** Scheduler-independent heartbeat dispatcher; one clock, independent checks. */
 defined('ABSPATH') || exit;
 
-function purr_child_heartbeat_tick(?int $now = null): array {
+function purr_child_heartbeat_tick(?int $now = null, ?array $only = null): array {
     $now = $now ?? time();
     $definitions = apply_filters('purrfect/heartbeat_components', []);
     if (!is_array($definitions)) {
@@ -10,6 +10,7 @@ function purr_child_heartbeat_tick(?int $now = null): array {
     }
     $results = [];
     foreach ($definitions as $id => $component) {
+        if ($only !== null && !in_array($id, $only, true)) continue;
         if (!is_string($id) || !preg_match('/^[a-z0-9_-]+$/', $id)
             || !is_array($component) || !isset($component['interval'], $component['callback'])
             || !is_int($component['interval']) || $component['interval'] < 1
