@@ -10,10 +10,10 @@ A Python 3.14-based foundation for **product-grounded assistance** with a WordPr
 | --- | --- | --- |
 | **Purr Assistant** | WordPress-side product discovery, local cache, heartbeat, admin UI, and chat bridge | Working local WordPress plugin, version `0.2.0` |
 | **Purr** | Product/WordPress guidance, scoped routing, conversation, and documented troubleshooting | Python HTTP prototype; deterministic by default, optional Ollama routing |
-| **Sophia** | Shared approved knowledge, history, checksummed snapshots/deltas, and revision leasing | Durable SQLite catalog and operator publication CLI, co-located with Purra in the lab |
+| **Sophia** | Shared approved knowledge, history, checksummed snapshots/deltas, and revision leasing | Durable SQLite catalog and operator publication CLI, co-located with Purr in the lab |
 | **Aurora** | Future execution worker | Not part of the WordPress Child dependency chain; not integrated |
 
-The user interacts with Purr Assistant, whose chat is powered by Purr. Products advertise active capabilities and product-owned evidence through `purrfect/product_signals`; inactive products are excluded. Purr provides guidance, not arbitrary product execution. Product-bundled knowledge remains fallback; a compatible, validated last-good Sophira lease takes precedence. Sophia's unavailability does not invalidate cached guidance.
+The user interacts with Purr Assistant, whose chat is powered by Purr. Products advertise active capabilities and product-owned evidence through `purrfect/product_signals`; inactive products are excluded. Purr provides guidance, not arbitrary product execution. Product-bundled knowledge remains fallback; a compatible, validated last-good Sophia lease takes precedence. Sophia's unavailability does not invalidate cached guidance.
 
 Knowledge is approved by a trusted operator through the CLI; the `--approved` flag **is not** an authenticated human approval workflow. Product knowledge and Sophia package revisions are separate: knowledge entries can carry individual `Revision N` metadata and change notes. Source identifiers are formatted for display, while stored original sources remain stable.
 
