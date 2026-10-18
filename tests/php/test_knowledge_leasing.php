@@ -15,7 +15,14 @@ function make_lease(int $revision, array $items): array {
         'items' => $items,
     ];
     usort($items, static fn($a, $b) => strcmp($a['id'], $b['id']));
-    $triples = array_map(static fn($i) => [$i['id'], $i['content'], $i['source']], $items);
+    $triples = array_map(static function ($i) {
+        $data = [$i['id'], $i['content'], $i['source']];
+        if (isset($i['entry_revision'])) {
+            $data[] = $i['entry_revision'];
+            $data[] = $i['change_note'] ?? null;
+        }
+        return $data;
+    }, $items);
     $package['digest'] = hash('sha256', json_encode(
         ['mock-translation', '1', $revision, 1, $triples],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -58,4 +65,26 @@ check_lease(purr_child_knowledge_apply($initial, [
     'type' => 'snapshot', 'product_id' => 'mock-translation',
     'product_version' => '1', 'payload' => $first,
 ]) !== [], 'Initial snapshot rejected');
-echo "PHP knowledge leasing smoke OK\n";
+
+
+$versioned = make_lease(3, [
+    ['id' => 'a', 'content' => 'approved refinement',
+     'source' => 'mock-translation://docs/troubleshoot/access',
+     'entry_revision' => 2, 'change_note' => 'Clarified access troubleshooting'],
+    ['id' => 'c', 'content' => 'new',
+     'source' => 'mock://c'],
+]);
+check_lease(purr_child_knowledge_valid($versioned), 'Versioned checksum rejected');
+$changed_note = $versioned;
+$changed_note['items'][0]['change_note'] = 'tampered';
+check_lease(!purr_child_knowledge_valid($changed_note), 'Changelog tampering not detected');
+$versioned_delta = [
+    'type' => 'delta', 'product_id' => 'mock-translation',
+    'product_version' => '1', 'from_revision' => 2, 'to_revision' => 3,
+    'upserts' => [$versioned['items'][0]], 'removed_ids' => [],
+    'target_digest' => $versioned['digest'],
+];
+$versioned_applied = purr_child_knowledge_apply($second, $versioned_delta);
+check_lease(($versioned_applied['digest'] ?? null) === $versioned['digest'],
+    'Versioned delta checksum invalid');
+echo "PHP knowledge leasing and per-entry revision smoke OK\n";
