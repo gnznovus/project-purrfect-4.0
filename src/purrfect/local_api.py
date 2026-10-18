@@ -5,6 +5,7 @@ import asyncio
 import re
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Lock
 from urllib.parse import urlparse
 
@@ -380,6 +381,12 @@ def respond(payload: dict, state: LocalState) -> dict:
         return finish(_clarify(knowledge), candidate.updated(pending=True))
 
 
+def _sophira_fault_active() -> bool:
+    """Development-only outage injection controlled by container shell, never HTTP."""
+    marker = os.environ.get("SOPHIRA_DEV_FAULT_FILE")
+    return bool(marker and Path(marker).is_file())
+
+
 def serve(host: str = "0.0.0.0", port: int = 8765):
     mode = os.environ.get("PURRA_BRAIN_MODE", "deterministic").lower()
     if mode not in ("deterministic", "ollama"):
@@ -408,12 +415,16 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
                     raise ValueError("Invalid body length")
                 payload = json.loads(self.rfile.read(count))
                 if path == "/v1/knowledge/sync":
+                    if _sophira_fault_active():
+                        raise ConnectionError("Sophira temporarily unavailable (development fault injection)")
                     if state.sophira is None:
                         raise ValueError("Sophira not configured")
                     output = sync_request(LocalSophiraClient(state.sophira), payload)
                 else:
                     output = respond(payload, state)
                 code = 200
+            except ConnectionError:
+                output, code = {"error": "Sophira temporarily unavailable"}, 503
             except (ValueError, TypeError, KeyError) as error:
                 output, code = {"error": str(error)}, 400
             body = json.dumps(output).encode("utf-8")
