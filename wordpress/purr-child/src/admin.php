@@ -222,6 +222,7 @@ function purr_child_admin_data(): array {
         'heartbeat' => $health,
         'network' => get_option('purr_child_network_health', []),
         'plugin_version' => get_file_data(dirname(__DIR__) . '/purr-child.php', ['Version' => 'Version'])['Version'],
+        'bootstrap_checksum' => hash_file('sha256', dirname(__DIR__) . '/purr-child.php'),
     ];
 }
 
