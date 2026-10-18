@@ -22,7 +22,7 @@ function Compose {
 }
 function WP([string]$service, [string[]]$commands) {
     & docker compose @composeArgs --profile tools run --rm -T $service wp @commands
-    if ($LASTEXITCODE -ne 0) { throw "WP-CLI failed on $service: $($commands -join ' ')" }
+    if ($LASTEXITCODE -ne 0) { throw "WP-CLI failed on ${service}: $($commands -join ' ')" }
 }
 function WaitForWP([string]$service) {
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
