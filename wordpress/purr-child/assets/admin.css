@@ -16,3 +16,16 @@
 @media(prefers-reduced-motion:reduce){.purr-console *{transition:none!important}}
 
 .purr-dependency-note{color:#786c71;font-size:12px;margin:0 0 17px;line-height:1.6;padding:10px 14px;border-left:3px solid #dcc5c8;background:#fff;border-radius:0 7px 7px 0}
+
+/* Approved Purr identity art: same-sized frames, swapped without fades or motion. */
+.purr-header-mark{position:relative;width:72px;height:72px;background:transparent;box-shadow:none;border-radius:0;outline-offset:3px}
+.purr-header-mark img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
+.purr-head-closed{visibility:hidden}
+.purr-header-mark.is-eyes-closed .purr-head-open{visibility:hidden}
+.purr-header-mark.is-eyes-closed .purr-head-closed{visibility:visible}
+.purr-header-mark.has-unavailable-frames{background:#ad3847;border-radius:16px}
+.purr-header-mark.has-unavailable-frames:before{content:"✦";color:#fff;font-size:31px}
+.purr-header-mark.has-unavailable-frames img{display:none}
+.purr-health-node .purr-health-name{display:flex;align-items:center;gap:8px}
+.purr-health-mark{width:23px;height:23px;object-fit:contain;flex:none}
+@media(max-width:800px){.purr-header-mark{width:56px;height:56px}}
