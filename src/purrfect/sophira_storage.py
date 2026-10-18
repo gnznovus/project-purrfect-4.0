@@ -61,12 +61,17 @@ class DurableSophira(SophiraCatalog):
             expected = previous + 1 if previous is not None else 1
             if package.revision != expected:
                 raise ValueError("Non-sequential revision")
-            with self._db:
-                self._db.execute(
-                    "INSERT INTO knowledge_revisions VALUES (?, ?, ?, ?)",
-                    (package.product_id, package.product_version, package.revision, encode(package)),
-                )
+            # Validate approval, notes and monotonic entry revisions BEFORE writing.
             super().publish_approved(package, approved=True)
+            try:
+                with self._db:
+                    self._db.execute(
+                        "INSERT INTO knowledge_revisions VALUES (?, ?, ?, ?)",
+                        (package.product_id, package.product_version, package.revision, encode(package)),
+                    )
+            except Exception:
+                self._history[key].pop()
+                raise
 
     def _refresh_from_db(self):
         # Other trusted operator processes may publish without restarting Purra.
