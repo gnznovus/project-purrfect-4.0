@@ -394,7 +394,7 @@ def serve(host: str = "0.0.0.0", port: int = 8765):
     model = OllamaModel(
         model=os.environ.get("PURRA_OLLAMA_MODEL", "llama3.2:3b"),
         base_url=os.environ.get("PURRA_OLLAMA_URL", "http://ollama:11434"),
-        timeout=20.0,
+        timeout=float(os.environ.get("PURRA_OLLAMA_TIMEOUT", "120")),
     ) if mode == "ollama" else None
     sophira_path = os.environ.get("SOPHIRA_DB_PATH")
     sophira = DurableSophira(sophira_path) if sophira_path else None
