@@ -262,8 +262,22 @@ add_action('wp_ajax_purr_child_admin_status', static function (): void {
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Permission denied', 403);
     }
-    // Same heartbeat engine as cron, no alternate scheduler or knowledge synchronization.
+    // Health recovery must also refresh the read-only version snapshot.
+    // Keep lease synchronization separate: this cannot modify cached knowledge.
+    $previous = get_option('purr_child_network_health', []);
     purr_child_heartbeat_tick(null, ['network_health']);
+    $current = get_option('purr_child_network_health', []);
+    $was_ready = is_array($previous) && ($previous['purra']['status'] ?? null) === 'healthy'
+        && ($previous['sophira']['status'] ?? null) === 'healthy';
+    $is_ready = is_array($current) && ($current['purra']['status'] ?? null) === 'healthy'
+        && ($current['sophira']['status'] ?? null) === 'healthy';
+    if ($is_ready) {
+        if (!$was_ready) {
+            purr_child_heartbeat_dirty('knowledge_versions');
+        }
+        // Retry failed checks on their existing heartbeat grid; no new scheduler.
+        purr_child_heartbeat_tick(null, ['knowledge_versions']);
+    }
     wp_send_json_success(purr_child_admin_data());
 });
 
