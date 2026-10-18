@@ -96,7 +96,8 @@
     const nodes = [['child','Purr Assistant'],['purra','Purr'],['sophira','Sophia']];
     const healthCards = nodes.map(([key,label]) => {
       const node = network[key] || {};
-      return '<div class="purr-health-node"><div class="purr-health-name">' + label + '</div>' +
+      const mark = key === 'child' || key === 'purra' ? '<img class="purr-health-mark" src="' + esc(cfg.purrIcon) + '" alt="" />' : '';
+      return '<div class="purr-health-node"><div class="purr-health-name">' + mark + esc(label) + '</div>' +
         badge(node.status) + '<p>' + esc(node.detail || 'Run Health Check to inspect this component.') + '</p></div>';
     }).join('');
     const heartbeats = data.heartbeat || {};
@@ -206,5 +207,43 @@
       for (const [name,panel] of Object.entries(els)) panel.hidden = name !== selected;
     }
   });
+  // Mascot timers run independently of the AJAX-rendered panels.
+  const mascot = document.querySelector('.purr-header-mark');
+  if (mascot) {
+    const open = mascot.querySelector('.purr-head-open');
+    const closed = mascot.querySelector('.purr-head-closed');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer = null;
+    let held = false;
+    const showClosed = value => mascot.classList.toggle('is-eyes-closed', value);
+    const cancel = () => { if (timer !== null) clearTimeout(timer); timer = null; };
+    const schedule = () => {
+      cancel();
+      if (held || document.hidden || reduced.matches) return;
+      timer = setTimeout(() => {
+        if (held || document.hidden || reduced.matches) return;
+        showClosed(true);
+        timer = setTimeout(() => { showClosed(false); schedule(); }, 500);
+      }, 6000 + Math.random() * 6000);
+    };
+    const hold = () => { held = true; cancel(); showClosed(true); };
+    const release = () => { held = false; showClosed(false); schedule(); };
+    mascot.addEventListener('pointerenter', hold);
+    mascot.addEventListener('pointerleave', release);
+    mascot.addEventListener('focus', hold);
+    mascot.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', () => {
+      cancel(); showClosed(held); if (!document.hidden) schedule();
+    });
+    if (reduced.addEventListener) reduced.addEventListener('change', () => {
+      showClosed(held); schedule();
+    });
+    if (open && closed) {
+      Promise.all([open, closed].map(img => img.decode().catch(() => {}))).then(() => {
+        if (open.naturalWidth && closed.naturalWidth) schedule();
+        else mascot.classList.add('has-unavailable-frames');
+      });
+    }
+  }
   draw();
 })();
