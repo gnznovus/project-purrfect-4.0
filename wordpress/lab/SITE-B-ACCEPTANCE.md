@@ -20,7 +20,9 @@ docker compose @compose --profile tools run --rm cli_b plugin activate purr-chil
 
 If Site B is already installed, do not run the install command again. The browser-based setup is simpler for first-run acceptance.
 
-Refresh the registry and knowledge lease **inside Site B** without touching Site A:
+For normal operation, open **Purr Child → Control Center** on Site B. Use **Registry → Check Versions**, **Knowledge → Check Versions** (read-only), and **Knowledge → Update All** (applies approved Sophira updates) instead of running PHP commands. The existing minute clock maintains registry, network-health, and knowledge heartbeat checks automatically.
+
+For **diagnostics only**, the following one-time PHP command can force the registry and knowledge heartbeat inside Site B without touching Site A:
 
 ```powershell
 @'
@@ -33,7 +35,7 @@ echo json_encode(get_option('purr_child_knowledge_leases', []), JSON_PRETTY_PRIN
 '@ | docker compose @compose exec -T wp_b php
 ```
 
-Expected: Site B independently leases Sophira's current mock-translation revision. Site A (localhost:8084) stays intact with its own cache. For a new revision, repeat the knowledge heartbeat **separately** on Site A and Site B and compare the revisions and Purra replies.
+Expected: Site B independently leases Sophira's current approved mock-translation revision. Site A (localhost:8084) stays intact with its own cache. To compare versions, use the Control Center on each site. The Knowledge version check never applies a lease; Update All synchronizes approved updates. During Sophira outages cached knowledge remains available, and recovery automatically rechecks version status.
 
 ```powershell
 docker compose @compose ps
