@@ -136,6 +136,44 @@ function purr_child_check_knowledge_versions(): bool {
     return true;
 }
 
+/** WordPress core upgraders only; never touch unrelated installed plugins. */
+function purr_child_admin_update_registry(): bool {
+    if (!current_user_can('update_plugins') || !current_user_can('update_themes')) {
+        return false;
+    }
+    $rows = purr_child_registry_version_rows(true);
+    $plugins = [];
+    $themes = [];
+    foreach ($rows as $row) {
+        if ($row['status'] !== 'update_available') continue;
+        if ($row['kind'] === 'plugin') $plugins[] = $row['key'];
+        if ($row['kind'] === 'theme') $themes[] = $row['key'];
+    }
+    if (!$plugins && !$themes) return purr_child_admin_run_check('registry_versions');
+    require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+    $skin = new Automatic_Upgrader_Skin();
+    $success = true;
+    if ($plugins) {
+        $results = (new Plugin_Upgrader($skin))->bulk_upgrade($plugins);
+        $success = is_array($results) && count($results) === count($plugins);
+        foreach ((array) $results as $result) {
+            if (is_wp_error($result) || $result === false) $success = false;
+        }
+    }
+    if ($themes) {
+        $results = (new Theme_Upgrader($skin))->bulk_upgrade($themes);
+        $success = $success && is_array($results) && count($results) === count($themes);
+        foreach ((array) $results as $result) {
+            if (is_wp_error($result) || $result === false) $success = false;
+        }
+    }
+    purr_child_heartbeat_dirty('registry');
+    purr_child_heartbeat_dirty('knowledge');
+    purr_child_heartbeat_dirty('registry_versions');
+    purr_child_heartbeat_tick();
+    return $success;
+}
+
 function purr_child_admin_run_check(string $component): bool {
     purr_child_heartbeat_dirty($component);
     $result = purr_child_heartbeat_tick();
@@ -172,6 +210,8 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
     $checks = ['check_registry' => 'registry_versions', 'check_knowledge' => 'knowledge_versions'];
     if (isset($checks[$action])) {
         $ok = purr_child_admin_run_check($checks[$action]);
+    } elseif ($action === 'update_registry') {
+        $ok = purr_child_admin_update_registry();
     } elseif ($action === 'sync_knowledge') {
         $ok = purr_child_admin_run_check('knowledge');
         if ($ok) {
