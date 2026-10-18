@@ -7,9 +7,9 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const date = v => v ? new Date(v * 1000).toLocaleString() : 'Not checked';
-  const badge = (state, version, verified = true) => {
+  const badge = (state, version, verified = true, knowledge = false) => {
     if (!verified) return '<span class="purr-status is-unknown">Unable to verify</span>';
-    if (state === 'update_available') return '<span class="purr-status is-warn">Newer version available: ' + esc(version ?? 'unknown') + '</span>';
+    if (state === 'update_available') return '<span class="purr-status is-warn">Newer version available: ' + esc(version == null ? 'unknown' : (knowledge ? 'Revision ' + version : version)) + '</span>';
     if (state === 'removed_upstream') return '<span class="purr-status is-warn">Removed upstream</span>';
     if (state === 'healthy') return '<span class="purr-status">Healthy</span>';
     if (state === 'degraded') return '<span class="purr-status is-warn">Degraded</span>';
@@ -67,8 +67,8 @@
           table(['Knowledge entry','Local revision','Version status'], entries.map(item =>
           '<tr><td><div class="purr-item-name">' + esc(item.id) + '</div><div class="purr-item-sub">' +
           esc(item.source) + '</div></td><td class="purr-knowledge-rev">' +
-          esc(item.revision == null ? 'Legacy' : 'r' + item.revision) + '</td><td>' +
-          badge(item.status,item.latest_revision == null ? null : 'r' + item.latest_revision,kv) +
+          esc(item.revision != null ? 'Revision ' + item.revision : (item.origin === 'built_in' ? name + ' Built-in' : item.origin === 'not_synchronized' ? 'Not synchronized' : 'Unversioned lease')) + '</td><td>' +
+          badge(item.status,item.latest_revision,kv,true) +
           '</td></tr>').join('')) + '</details>';
       }
       tree += '</div></details>';
