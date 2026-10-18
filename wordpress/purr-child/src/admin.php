@@ -228,7 +228,7 @@ function purr_child_admin_data(): array {
 
 add_action('admin_menu', static function (): void {
     add_menu_page('Purr Child Administration', 'Purr Child', 'manage_options',
-        'purr-child-admin', 'purr_child_render_admin', 'dashicons-admin-generic');
+        'purr-child-admin', 'purr_child_render_admin', 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#a7aaad" d="M4.3 10.6 3 2.3l6 3.5a10 10 0 0 1 6 0l6-3.5-1.3 8.3a8.8 8.8 0 0 1-2 8.2C16.1 20.3 14.4 21 12 21s-4.1-.7-5.7-2.2a8.8 8.8 0 0 1-2-8.2ZM8.3 13a1.4 1.4 0 1 0 0 .1Zm8.8 0a1.4 1.4 0 1 0 0 .1ZM10 16.3l2 1.7 2-1.7-2-1.1Z"/></svg>'));
 });
 
 add_action('wp_ajax_purr_child_admin_action', static function (): void {
@@ -263,14 +263,22 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
 
 function purr_child_render_admin(): void {
     if (!current_user_can('manage_options')) return;
-    echo '<div class="wrap"><h1>Purr Child — Administration</h1>';
-    echo '<nav class="nav-tab-wrapper"><a href="#registry" class="nav-tab nav-tab-active" data-purr-tab="registry">Registry</a>';
-    echo '<a href="#knowledge" class="nav-tab" data-purr-tab="knowledge">Knowledge</a>';
-    echo '<a href="#settings" class="nav-tab" data-purr-tab="settings">Settings</a></nav>';
-    echo '<div id="purr-admin-registry" class="purr-admin-panel"></div>';
-    echo '<div id="purr-admin-knowledge" class="purr-admin-panel" hidden></div>';
-    echo '<div id="purr-admin-settings" class="purr-admin-panel" hidden></div></div>';
-    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.1.0', true);
+    echo '<div class="wrap purr-console">';
+    echo '<div class="purr-console-header"><div class="purr-header-mark" aria-hidden="true">✦</div><div>';
+    echo '<div class="purr-eyebrow">PROJECT PURRFECT / WORDPRESS</div>';
+    echo '<h1>Purr Child <span>Control Center</span></h1>';
+    echo '<p>Manage product connections, approved knowledge and network diagnostics.</p>';
+    echo '</div><span class="purr-header-version">CHILD NODE</span></div>';
+    echo '<nav class="purr-console-tabs" aria-label="Purr Child sections">';
+    echo '<button type="button" class="purr-console-tab is-active" data-purr-tab="registry" aria-selected="true">Registry</button>';
+    echo '<button type="button" class="purr-console-tab" data-purr-tab="knowledge" aria-selected="false">Knowledge</button>';
+    echo '<button type="button" class="purr-console-tab" data-purr-tab="settings" aria-selected="false">Settings</button></nav>';
+    echo '<div id="purr-admin-feedback" role="status" aria-live="polite"></div>';
+    echo '<section id="purr-admin-registry" class="purr-admin-panel"></section>';
+    echo '<section id="purr-admin-knowledge" class="purr-admin-panel" hidden></section>';
+    echo '<section id="purr-admin-settings" class="purr-admin-panel" hidden></section></div>';
+    wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.0');
+    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.0', true);
     wp_add_inline_script('purr-child-admin', 'window.purrChildAdmin=' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('purr_child_admin'),
         'initial' => purr_child_admin_data(),
