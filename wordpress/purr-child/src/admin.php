@@ -219,11 +219,27 @@ function purr_child_network_health(): array {
     return $result;
 }
 
+function purr_child_heartbeat_network_health(): bool {
+    purr_child_network_health();
+    return true; // Availability is data; the probe itself completed.
+}
+
+function purr_child_knowledge_dependency_ready(bool $fresh = false): bool {
+    $health = get_option('purr_child_network_health', []);
+    // Server-side action guard always gets a fresh probe; prevents stale enabled buttons.
+    if ($fresh || !is_array($health) || !isset($health['checked_at'])
+        || time() - (int) $health['checked_at'] > 75) {
+        $health = purr_child_network_health();
+    }
+    return ($health['purra']['status'] ?? null) === 'healthy'
+        && ($health['sophira']['status'] ?? null) === 'healthy';
+}
+
 function purr_child_admin_data(): array {
     $registry = get_option('purr_child_registry_version_status', []);
     $knowledge = get_option('purr_child_knowledge_version_status', []);
     $health = [];
-    foreach (['registry', 'registry_versions', 'knowledge', 'knowledge_versions'] as $id) {
+    foreach (['registry', 'registry_versions', 'knowledge', 'knowledge_versions', 'network_health'] as $id) {
         $health[$id] = get_option('purr_child_heartbeat_' . $id, []);
     }
     return [
@@ -241,6 +257,16 @@ add_action('admin_menu', static function (): void {
         'purr-child-admin', 'purr_child_render_admin', 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#a7aaad" d="M4.3 10.6 3 2.3l6 3.5a10 10 0 0 1 6 0l6-3.5-1.3 8.3a8.8 8.8 0 0 1-2 8.2C16.1 20.3 14.4 21 12 21s-4.1-.7-5.7-2.2a8.8 8.8 0 0 1-2-8.2ZM8.3 13a1.4 1.4 0 1 0 0 .1Zm8.8 0a1.4 1.4 0 1 0 0 .1ZM10 16.3l2 1.7 2-1.7-2-1.1Z"/></svg>'));
 });
 
+add_action('wp_ajax_purr_child_admin_status', static function (): void {
+    check_ajax_referer('purr_child_admin', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Permission denied', 403);
+    }
+    // Same heartbeat engine as cron, no alternate scheduler or knowledge synchronization.
+    purr_child_heartbeat_tick(null, ['network_health']);
+    wp_send_json_success(purr_child_admin_data());
+});
+
 add_action('wp_ajax_purr_child_admin_action', static function (): void {
     check_ajax_referer('purr_child_admin', 'nonce');
     if (!current_user_can('manage_options')) {
@@ -249,11 +275,18 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
     $action = isset($_POST['operation']) && is_string($_POST['operation'])
         ? sanitize_key(wp_unslash($_POST['operation'])) : '';
     $checks = ['check_registry' => 'registry_versions', 'check_knowledge' => 'knowledge_versions'];
+    if (in_array($action, ['check_knowledge', 'sync_knowledge'], true)
+        && !purr_child_knowledge_dependency_ready(true)) {
+        wp_send_json_error([
+            'message' => 'Sophira knowledge services are unavailable. Cached knowledge remains accessible.',
+            'reason' => 'dependency_unavailable',
+            'data' => purr_child_admin_data(),
+        ], 503);
+    }
     if (isset($checks[$action])) {
         $ok = purr_child_admin_run_check($checks[$action]);
     } elseif ($action === 'health_check') {
-        purr_child_network_health();
-        $ok = true;
+        $ok = purr_child_admin_run_check('network_health');
     } elseif ($action === 'update_registry') {
         $ok = purr_child_admin_update_registry();
     } elseif ($action === 'sync_knowledge') {
@@ -265,7 +298,7 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
         wp_send_json_error('Unsupported action', 400);
     }
     if (!$ok) {
-        wp_send_json_error(['message' => 'Check failed; last-good knowledge remains unchanged.',
+        wp_send_json_error(['message' => 'Operation failed; previous verified data remains available.',
             'data' => purr_child_admin_data()], 503);
     }
     wp_send_json_success(purr_child_admin_data());
@@ -288,7 +321,7 @@ function purr_child_render_admin(): void {
     echo '<section id="purr-admin-knowledge" class="purr-admin-panel" hidden></section>';
     echo '<section id="purr-admin-settings" class="purr-admin-panel" hidden></section></div>';
     wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.0');
-    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.0', true);
+    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.1', true);
     wp_add_inline_script('purr-child-admin', 'window.purrChildAdmin=' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('purr_child_admin'),
         'initial' => purr_child_admin_data(),
