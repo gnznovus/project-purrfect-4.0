@@ -1,204 +1,82 @@
 # Project Purrfect 4.0
 
-Python 3.14+ foundation for Purra, a product-specialized guidance system.
+A Python 3.14-based foundation for **product-grounded assistance** with a WordPress Child prototype. The first foundation integration (Goals 1.1–1.10) was merged in [PR #1](https://github.com/gnznovus/project-purrfect-4.0/pull/1).
 
-## Status
+**Status: validated local prototype, not production-ready.** The live Docker lab covers two separate WordPress sites, shared approved knowledge, a floating Purra assistant, and the Purr Child Control Center. CI exercises deterministic contracts and simulated WordPress components; actual LLM quality, external production systems, and real plugin-package upgrades are not covered.
 
-**Goal 1.1:** deterministic guidance contract.
+## Components and boundaries
 
-**Goal 1.2:** provider-neutral objective selection using an LLM, with Ollama as the first real adapter. The LLM can select only advertised product objectives. Missing inputs, allowed options, target IDs and output structure are controlled by the product's guidance definition. Invalid model output fails closed to an unsupported response.
+| Component | Responsibility | Implemented state |
+| --- | --- | --- |
+| **Purr Child** | WordPress-side product discovery, local cache, heartbeat, admin UI, and chat bridge | Working local WordPress plugin, version `0.2.0` |
+| **Purra** | Product/WordPress guidance, scoped routing, conversation, and documented troubleshooting | Python HTTP prototype; deterministic by default, optional Ollama routing |
+| **Sophira** | Shared approved knowledge, history, checksummed snapshots/deltas, and revision leasing | Durable SQLite catalog and operator publication CLI, co-located with Purra in the lab |
+| **Aurora** | Future execution worker | Not part of the WordPress Child dependency chain; not integrated |
 
-Not implemented: real product/RAG retrieval, diagnosis, general answer generation, Child networking, persistence, premium automation, execution, Sophira or Aurora integration. The code never executes client product actions. The examples in tests are fixed fixtures, not live product knowledge.
+The user interacts with Child/Purra. Products advertise active capabilities and product-owned evidence through `purrfect/product_signals`; inactive products are excluded. Purra provides guidance, not arbitrary product execution. Product-bundled knowledge remains fallback; a compatible, validated last-good Sophira lease takes precedence. Sophira's unavailability does not invalidate cached guidance.
 
-## Architecture direction
+Knowledge is approved by a trusted operator through the CLI; the `--approved` flag **is not** an authenticated human approval workflow. Product knowledge and Sophira package revisions are separate: knowledge entries can carry individual `Revision N` metadata and change notes. Source identifiers are formatted for display, while stored original sources remain stable.
 
-- **Purra:** reasoning and guided product support (primary focus).
-- **Purr Child:** product-specific assistant; UUIDv7 identity planned.
-- **Sophira:** future shared, human-approved knowledge repository.
-- **Aurora:** separate future execution integration.
+## Development and tests
 
-Clients interact with Child. Developers may communicate with Purra directly. No network protocol has been chosen.
-
-## Development
-
-Goal → Contract → Implement → Validate → Document.
-
-Windows PowerShell using Python 3.14 directly (no virtual environment):
+From the repository root (PowerShell, Python 3.14 installed):
 
 ```powershell
 py -3.14 -m pip install -e ".[dev]"
 py -3.14 -m pytest
 ```
 
-CI automatically installs and runs all tests for pushes and pull requests.
+CI also runs PHP syntax/smoke checks, JavaScript syntax checks, and Docker Compose configuration checks. The latest pre-merge integration CI passed **147 Python tests**, PHP tests, and JS/Compose validation. See [PR #1](https://github.com/gnznovus/project-purrfect-4.0/pull/1) for integration evidence. Keep future acceptance reports tied to the tested commit rather than treating this number as a permanent guarantee.
 
-## Usage boundary
+The `stateful_*`, adaptive routing, and LangGraph paths include experiments and comparison tests; they are **not** proof of complete live support-task persistence or production LLM behavior.
 
-`PurraBrain(model).start(user_message, product_objectives)` selects an advertised `ProductObjective` by ID and returns a `GuidanceSession` with typed interactive inputs. A product integration must supply its own objective catalog and actual target options. `OllamaModel` communicates with a running local Ollama server (default model `llama3.2:3b`) but live-model testing requires that server/model; deterministic CI tests use a fake model and a mocked HTTP adapter.
+## Existing WordPress lab
 
-Purra's output does not authorize or run commands. Developer setup/test commands run through project CI, not through the LLM.
+The repository contains an additive two-site Docker Compose lab:
 
+| Site | URL | Local state |
+| --- | --- | --- |
+| Site A | http://localhost:8084/wp-admin/ | Own WordPress database, registry, leases, heartbeat |
+| Site B | http://localhost:8083/wp-admin/ | Independent WordPress database, registry, leases, heartbeat |
 
-## Goal 1.3 — Stateful conversation experiment
+Both sites use the same lab Purra/Sophira container and Sophira data volume. Port `8085` is **reserved for Syndacast Layout Engine**, not this lab.
 
-Two isolated adapters (`CustomConversation` and `LangGraphConversation`) use the exact same pure domain transition function in `stateful.py`. Parameterized tests compare ordered multi-turn input, target corrections, session isolation, and rejection of invalid answers. Correcting an earlier answer invalidates downstream selections.
-
-LangGraph uses an in-memory checkpointer, not durable storage. State does **not** survive a process restart. This experiment does not test real LLM decisions, interruption/resume through external IO, performance, or production persistence. LangGraph is installed as a **development-only** dependency while we evaluate it. No production adoption decision has been made.
-
-
-### Recovery comparison (experimental)
-
-Both reference adapters optionally accept a SQLite file path and recover conversation answers after the adapter is recreated. The same parameterized tests cover resuming guidance, correcting an earlier target (clearing downstream selections), and preserving separate session IDs. The custom implementation persists JSON state; LangGraph uses `SqliteSaver` from `langgraph-checkpoint-sqlite`.
-
-The recovered state is validated against the existing product-owned guidance contract before accepting new answers. CI passed the recovery suite on Python 3.14. SQLite is a **local experiment**, not an approved production storage choice. The tests do not simulate a crashed OS process, concurrent writers, genuine LangGraph interrupts, real LLM interaction, or network disconnection. No framework selection is finalized.
-
-
-## Goal 1.4 — Adaptive decision routing
-
-`AdaptiveGuide` coordinates the existing custom Python or LangGraph guidance adapters. The LLM returns a constrained route: continue, correct, switch objectives, or clarify. Product-provided definitions remain authoritative for valid objectives, input keys, and selectable target IDs. Earlier answers are retained on objective changes only if compatible with the new product requirements and revalidated. Switching back to an abandoned objective starts a fresh revision.
-
-Verified by shared, parameterized tests for both backends, including valid continuations, corrections, product objective changes, ambiguous/unsupported model output, and separate client sessions.
-
-**Current limitations:** The routing model is fake in CI; no live LLM/product integration was tested. The adaptive coordinator's objective bindings and revisions are kept in memory and are not durable across process restarts. Existing stateful adapter persistence tests remain in place, but do not establish persistence of the new coordinator. No product operation, automatic repair, knowledge retrieval, or publication is implemented. This remains isolated feature work pending broader validation.
-
-
-## Goal 1.5 — Product discovery and knowledge-grounded support (experimental)
-
-- **1.5A:** `wordpress/purr-child/` contains a read-only WordPress plugin. The admin-only `GET /wp-json/purrfect/v1/discovery` endpoint enumerates active plugins (including multisite network activations), current theme and parent theme, and accepts **explicit** `purrfect/product_signals` declarations only for installed active component keys. The plugin does **not** transmit inventory to Purra on its own. A sample integration is in `wordpress/examples/product-integration.php`. Install/activate the plugin on an actual WP site before claiming live-site compatibility.
-- **1.5B:** `purrfect.discovery.discover` checks snapshot shape, active keys, contract version, knowledge identity/version and duplicate IDs. `SiteKnowledge` provides deterministic token-overlap retrieval scoped to selected active products and a tiny read-only Everyday WordPress FAQ. It is **not** vector/semantic RAG and does not ingest web pages or execute diagnostics.
-- **1.5C:** `ScopeGuide` selects product/general-WP/clarification/unsupported through the existing `TextModel` interface, verifies all model-returned product IDs, and returns evidence verbatim with source records. `choose` consumes interactive user selections. No product operations are allowed.
-
-Run `py -3.14 -m pip install -e ".[dev]"` and `py -3.14 -m pytest` on Windows. CI also runs `php -l` and `php tests/php/test_discovery.php`.
-
-**Boundaries:** The Child does not provide an authenticated Python service/client or any deployment wiring yet; snapshots are supplied to Python explicitly. The PHP smoke test uses WordPress function shims and does not establish real WP runtime compatibility. PHP product signals share WordPress's plugin trust boundary and are not independently cryptographically attributable to the plugin file they claim. Do not expose plugin inventory to unauthenticated clients. Knowledge records are only as trustworthy as the participating product's declared data; the included WordPress FAQ is deliberately basic. Objective selection, coordinator persistence, real model behavior, network integration, full WordPress E2E, and real document ingestion need separate validation. Sophira and automated remediation remain out of scope.
-
-
-## Goal 1.5D — Purr Child heartbeat + Docker lab
-
-The **Child owns one traffic-independent wall-clock tick**, with independently registered component intervals. The first component is a five-minute product registry check. WordPress activation/deactivation, update and theme-switch hooks mark it dirty for the next tick. Per-component options track attempts, successes, failures and due times; `add_option` prevents normal concurrent runs, and abandoned locks expire. Failure of a component is caught and does not stop subsequent components. Changed registry snapshots are written only when their SHA-256 digest differs.
-
-To try the isolated WordPress lab (Docker Desktop and Docker Compose required):
+For an **already installed** lab, run from repository root:
 
 ```powershell
-cd wordpress/lab
-docker compose up -d --build
-docker compose --profile tools run --rm cli wp core install --url=http://localhost:8084 --title="Purr Child Lab" --admin_user=purr-lab --admin_password="local-lab-only-change-me" --admin_email=lab@example.invalid --skip-email
-cd ../..
-py -3.14 -m pip install -e ".[dev]"
-py -3.14 wordpress/lab/acceptance.py
+$compose = @(
+  '-f', 'wordpress/lab/compose.yaml',
+  '-f', 'wordpress/lab/compose.site-b.yaml'
+)
+docker compose @compose --profile brain up -d --no-recreate db wp clock db_b wp_b clock_b purra
+docker compose @compose ps
 ```
 
-The WP site is at http://localhost:8084. The acceptance test activates two **mock products** (layout, translation), refreshes the registry through the heartbeat, checks Python knowledge separation, deactivates one mock product, confirms removal, then restores it. The Child endpoint `/wp-json/purrfect/v1/discovery` requires `manage_options`; it must not be made publicly readable.
+Do **not** rerun WordPress installation on existing sites. On a new lab, use the WordPress installer and activate **Purr Child**, **Purr Mock Layout**, and/or **Purr Mock Translation** through each site's Plugins screen. See [Site B setup and acceptance](wordpress/lab/SITE-B-ACCEPTANCE.md).
 
-Use `docker compose -f wordpress/lab/compose.yaml down` to stop containers. Do **not** use `down -v` unless you intentionally want to erase this lab's WordPress and database volumes.
+The WordPress admin **Purr Child → Control Center** offers:
+- **Registry:** version checking through WordPress native update data; `Update All` uses native upgraders on registered products only.
+- **Knowledge:** expandable Product → Category → Entry tree; read-only `Check Versions`, approved `Update All` synchronization, individual entry revisions and compatibility checks.
+- **Settings:** plugin version, diagnostic bootstrap SHA-256 (not verified release integrity), heartbeat history, and independent Purr Child/Purra/Sophira health.
 
-The `clock` container aligns wakeups to minute boundaries; checks choose their own intervals and can be marked dirty. Normal WordPress WP-Cron is disabled inside the lab. Outside this lab, the plugin provides WP-Cron as a traffic-dependent fallback; a production-quality always-on clock requires a reliable external runner. This is **not** real-time immediate triggering: an activation marks the registry dirty and the next clock tick handles it.
+Knowledge controls pause while Sophira is unavailable; the heartbeat and open admin page detect recovery and automatically refresh read-only version statuses. The floating **Purra** chat widget remains on administrator pages. The former full-page **Local Bridge Lab** UI was removed.
 
-**Validation distinction:** CI verifies PHP syntax, simulated WordPress heartbeat behaviors, and Python tests. The opt-in Docker acceptance test needs a machine with Docker; it has not been run by this assistant. No LLM service or cross-process RPC has been wired, and retrieval uses deterministic mock knowledge rather than vector RAG. This branch must not be called production-complete.
+The default local Brain mode is deterministic. Ollama routing is optional (`PURRA_BRAIN_MODE=ollama` with a reachable, provisioned Ollama service); it must be validated separately.
 
+### Safety and operations
 
-## Goal 1.6 — WordPress GUI ↔ local Python POC
+- Do **not** run `docker compose down -v`, `docker volume rm`, or reset either WordPress or Sophira volume during routine operations.
+- Internal `purra:8765` endpoints are intended only for the isolated lab. No cross-host authenticated deployment contract exists; never publish these endpoints to the internet.
+- WordPress discovery and management endpoints require administrator permissions; chat and admin AJAX use nonce/capability checks.
+- Cached leases are checksum validated. Health checks distinguish service availability from data integrity; a local bootstrap-file hash is **not** official release verification.
+- The WordPress lab uses an external minute clock, with a WP-Cron fallback outside the lab. Component schedules are independent; manual checks use the same heartbeat dispatcher.
+- The mock products are fixtures. A successful no-op native update check does **not** prove installing a real plugin release.
 
-**Local-only, not production authentication/deployment.** Reuses WordPress on port 8084, active mock product registry, and Purr Child. The WordPress admin menu **Purr Child Lab** provides a minimal chat; admin-ajax.php validates the logged-in administrator's capability and nonce before WordPress sends JSON to the internal `purra:8765/v1/chat` Python container. No Python port is published to the host or browser. Browser text is rendered as text, never HTML.
+## Next work, not yet implemented
 
-From the repository root (after switching to `feat/purr-local-chat-1-6`):
-```powershell
-docker compose -f wordpress/lab/compose.yaml up -d --build
-docker compose -f wordpress/lab/compose.yaml ps
-```
-Visit http://localhost:8084/wp-admin/ and sign in using your existing **lab** administrator account (do not rerun WordPress core install). Open **Purr Child Lab** from the left admin menu. Try “I can't edit my page”: Purra should ask which registered product or WordPress area, then render clickable options. Choose Mock Layout to retrieve mock knowledge. Ask “login password” for general WP basics; ask about an unsupported area to see clarification. The two mock product plugins must be active and the registry heartbeat must have refreshed.
+- Harden independent Sophira/Purra service authentication and deployment contracts.
+- Validate actual plugin update packages and safe release integrity; rollback requires separately verified artifacts and recovery behavior.
+- Implement a real proposal/review/approval workflow for shared knowledge rather than relying solely on operator assertion.
+- Extend integrations beyond local mock products; test actual model behavior and persistence under real workloads.
 
-Communication passes through real HTTP and JSON (WordPress → Python container); product identification is deliberately **deterministic and basic**, not live LLM reasoning. `src/purrfect/local_api.py` holds ephemeral Python-side sessions in process memory; restart erases context. The browser session is generated anew per page load. This is not the final cross-site bridge, not real RAG, not complete 1.4 adaptive flow, and not independently authenticated at the Python service boundary. The backend's default HTTP binding is only appropriate inside this isolated Docker network. Do not expose port 8765 publicly. The discovery snapshot is currently forwarded on each request: final multi-tenant installation identity and authorization still need design.
-
-Test failures: `docker compose -f wordpress/lab/compose.yaml logs --tail=80 purra wp`.
-Stop without deleting database: `docker compose -f wordpress/lab/compose.yaml down`. No `down -v`.
-
-
-## Goal 1.6 — Optional local Ollama Brain integration
-
-The WordPress lab's existing chat can now route new questions through `select_scope`, backed by the existing `OllamaModel` adapter and a constrained selection schema. Only active product IDs, basic WordPress, out-of-scope, or clarification are permitted; responses still come verbatim from verified evidence, not generated troubleshooting text. Interactive selections remain deterministic and validated against the latest installed inventory.
-
-The lab defaults to the **previous deterministic mode** until Ollama is explicitly enabled. To enable real local model routing, run from the repo root:
-
-```powershell
-git switch feat/purra-ollama-brain-1-6
-docker compose -f wordpress/lab/compose.yaml --profile brain up -d --build
-docker compose -f wordpress/lab/compose.yaml exec ollama ollama pull llama3.2:3b
-$env:PURRA_BRAIN_MODE = "ollama"
-docker compose -f wordpress/lab/compose.yaml --profile brain up -d --force-recreate purra
-docker compose -f wordpress/lab/compose.yaml logs --tail=30 purra
-```
-
-Open http://localhost:8084/wp-admin/ and use **Purr Child Lab**. The transcript includes a routing marker (`brain`, `brain-clarify`, or `brain-unavailable`) when Ollama mode is active. Compare an explicit mock translation request, ambiguous editing question, ordinary WordPress password issue, and unsupported question. The Python model timeout is 5 seconds; unavailable models yield an explicit explanation and interactive choices, never fabricated guidance.
-
-PowerShell environment overrides apply to the Compose invocation that starts the service. To return to deterministic mode, set `$env:PURRA_BRAIN_MODE = "deterministic"` and recreate just `purra`. The Ollama model remains a **local optional Docker service**, with no host port published.
-
-**Limitations:** This is classification + verified retrieval, not free-form LLM answers, complete 1.4 multi-turn reasoning, production authentication, or semantic RAG. CI tests use fake models and do not verify actual Ollama availability or inference quality. Only enable in the isolated Docker lab.
-
-
-## Goal 1.7 — Floating admin Purr Child (POC)
-
-The existing WordPress plugin now mounts a fixed bottom-right Purr Child chat widget on **WordPress admin pages for users with manage_options**. It stays collapsed until opened, showing a short greeting bubble once per browser tab session. The old full-page **Purr Child Lab** remains available for debugging.
-
-The widget stores a bounded display history, session identifier, pending option labels, open state and prior text context in **sessionStorage**, scoped to origin, site and current WordPress user. Navigation and refresh in the same tab restore these; a new tab generally starts separately. Browser session-restore and duplicated-tab behavior remain browser-dependent. Browser context is untrusted: the backend validates shape/length and checks any product selection against the current active registry on every request.
-
-Purra handles greetings and basic conversational acknowledgements, and passes a previous-question hint to its existing constrained Brain scope classifier for follow-ups. Answers still come only from currently registered evidence or the Everyday WordPress FAQ. Backend memory and browser display history are separate: browser context can recover basic topic/selection after a Python restart, but **not the complete experimental CustomConversation/AdaptiveGuide checkpoints**. Integration of their richer guidance-task state into this live chat remains future hardening; no autonomous steps or knowledge writes were introduced.
-
-### Local acceptance
-
-```powershell
-git fetch origin
-git switch --track origin/feat/purr-conversation-widget-1-7
-docker compose -f wordpress/lab/compose.yaml --profile brain up -d --build
-```
-
-If you had already enabled Ollama, set `$env:PURRA_BRAIN_MODE = "ollama"` **before** the compose command above, or recreate the `purra` service with that environment afterward. No WordPress database wipe is required.
-
-Open http://localhost:8084/wp-admin/ then navigate around multiple admin pages and refresh. Confirm the bottom-right greeting and expandable widget, conversation transcript and pending choices persist. Try "Hi Purra!", "Can I ask something else?", a translation question, "What about that step?", and a correction to another product. For a fresh tab verify a separate conversation; deactivate a mock plugin and confirm the old restored context cannot produce its guidance. The old lab chat is still accessible for comparisons.
-
-The floating chat is an **admin-only local POC**, not a production-ready distributed assistant. CI covers Python behavior, PHP syntax, and JS syntax; live WordPress browser acceptance still requires the local Docker lab.
-
-
-## Purra character avatar integration
-
-This branch displays Purra's illustration in the floating launcher, chat title, and top-left of her message rows. User-facing widget name is **Purra**; internal Purr Child plugin identifiers remain unchanged. Aurora's matching avatar is reserved for future use.
-
-**Artwork delivery step:** The PNG assets are supplied separately in `purra_avatar_assets.zip` (not included in the GitHub source commit). Extract the archive **at the repository root** so that `wordpress/purr-child/assets/purra-avatar.png` and `wordpress/purr-child/assets/aurora-avatar.png` exist. The files are optimized 512×512 transparent PNGs derived from the approved individual portraits. The Purr Child plugin directory is bind-mounted into the local WordPress container, so the images become available without rebuilding.
-
-Switch to `feat/purra-avatar-ui-1-7`, extract the assets, then refresh WordPress admin. Check the collapsed avatar, header, and Purra message avatars. No changes were made to Purra's HTTP or Brain contracts.
-
-
-## Goal 1.7 Slice 2 — Recoverable intent and choices
-
-The live `/v1/chat` service now keeps an explicit, versioned, bounded support conversation state: last grounded topic, selected scope, whether a validated choice is pending, and revision. The same state is returned as `context` and stored by the floating admin widget in per-tab `sessionStorage`. It survives WordPress navigation and refresh. After a Python process restart the browser can restore that limited support context.
-
-Interactive choice IDs remain server-defined; after a clarification, the user can select from the **currently registered** products, general WordPress, and out-of-scope. The server rejects selections with no pending question, rejects stale or inactive products, and does not accept browser context as proof that a product is active. A new free-text request replaces pending choices; corrections are freshly routed by the existing Brain against the current registry. No unsupported operations or knowledge edits were added.
-
-Live local acceptance on the active Docker lab:
-1. Open WordPress admin and Purra; ask an ambiguous question, then refresh and click one of the restored product buttons.
-2. Ask another unrelated question; ensure previous buttons do not silently select the old topic.
-3. Ask a product question, refresh or navigate across admin screens, then ask a contextual follow-up.
-4. Restart only the Python service with `docker compose -f wordpress/lab/compose.yaml restart purra`; confirm a pending choice is recoverable.
-5. Deactivate one mock product, wait for registry refresh, then verify that an old button for that product is refused.
-6. Open a fresh tab; check that it does not inherit the current tab's ongoing intent.
-
-**Scope boundary:** This slice uses the existing `GuidanceResponse`/`Interaction` contracts and the local Brain router with a small explicit support-context state object. The experimental `CustomConversation` engine models objective field collection, not this freeform support classifier; its full checkpoint progression has *not* been wired into the live widget. SessionStorage is browser-session storage, with browser-specific duplicate-tab/session-restore behavior. This is a local POC pending browser acceptance, not a production identity or permanent persistence system.
-
-
-## Goal 1.7 Slice 3 — Conversational Intelligence POC
-
-The existing admin widget and avatar are unchanged. Local Purra now distinguishes short conversational feedback from new product support requests. Constrained conversational classification (`conversation_intent.py`) can choose a move, but **cannot write technical advice or invoke product actions**. Verified knowledge and the current active registry remain the only sources of product instructions.
-
-Recoverable conversation context now includes a bounded `outcome` (`open`, `unresolved`, `resolved`) and an `evidence_id` reference. They survive the browser session/refresh and a local Python process restart; evidence is checked against the **currently active** product when reused. A statement that guidance did not work produces a diagnostic question; success receives an acknowledgement. Undocumented previous-step follow-ups ask for clarification instead of inventing steps. Simpler explanations currently **repeat and identify the documented instruction** rather than rewriting it with potentially unsupported steps; richer grounded paraphrasing is not implemented yet.
-
-Acceptance in the existing local WordPress admin widget, after switching to `feat/purra-conversation-intelligence-1-7c` and restarting `purra`:
-1. Greet Purra; request Mock Layout or Mock Translation help and receive sourced guidance.
-2. Say `What about the previous step?`; verify Purra asks rather than inventing one.
-3. Say `That didn't work.`; verify a diagnostic question.
-4. Say `Thanks, it worked!`; verify resolution acknowledgement.
-5. Say `Can you explain that more simply?`; verify she quotes verified evidence only, or clarifies if no supported evidence exists.
-6. Correct the product (`No, I meant translation`); verify the new scope is registered.
-7. Refresh and restart the Python service; verify the current topic and resolution remain available.
-8. Ask something unsupported; verify no made-up instructions.
-
-Model inference quality and response wording still require local browser acceptance. Existing product/button guidance and UI are unchanged. This does **not** integrate the experimental full CustomConversation task checkpoint engine into the live support widget.
+**Working principle:** Build and validate focused slices first; document the proven state, unresolved boundaries and exact reproducible acceptance paths afterward. Avoid treating experimental code or green unit tests as production certification.
