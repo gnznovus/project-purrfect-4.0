@@ -45,6 +45,16 @@ jobs:
           node --check wordpress/purr-child/assets/chat.js
           node --check wordpress/purr-child/assets/widget.js
           node --check wordpress/purr-child/assets/admin.js
+      - name: PowerShell bootstrap syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path bootstrap.ps1), [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Docker Compose configuration
         run: |
           docker compose -f wordpress/lab/compose.yaml config --quiet
