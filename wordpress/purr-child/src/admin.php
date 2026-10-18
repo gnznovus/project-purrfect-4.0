@@ -257,6 +257,12 @@ add_action('admin_menu', static function (): void {
         'purr-child-admin', 'purr_child_render_admin', plugins_url('../assets/purr-p2-sidebar.png', __FILE__));
 });
 
+// WordPress does not guarantee intrinsic sizing for custom menu image URLs.
+// Constrain the full-resolution P2 artwork on every admin screen, not only our page.
+add_action('admin_head', static function (): void {
+    echo '<style id="purr-assistant-menu-icon">#adminmenu #toplevel_page_purr-child-admin .wp-menu-image img{width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important;object-fit:contain;opacity:1}</style>';
+});
+
 /** Re-check version statuses after a service recovery without updating leases. */
 function purr_child_admin_refresh_dependency_status(): void {
     // Health recovery must also refresh the read-only version snapshot.
