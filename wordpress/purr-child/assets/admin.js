@@ -238,10 +238,16 @@
     if (reduced.addEventListener) reduced.addEventListener('change', () => {
       showClosed(held); schedule();
     });
+    // Start the clock independently of image decoding: an offscreen/hidden
+    // frame may never resolve decode() in some browsers despite being usable.
+    // Hover switching already proves both frames can be displayed.
     if (open && closed) {
+      schedule();
       Promise.all([open, closed].map(img => img.decode().catch(() => {}))).then(() => {
-        if (open.naturalWidth && closed.naturalWidth) schedule();
-        else mascot.classList.add('has-unavailable-frames');
+        if (!open.naturalWidth || !closed.naturalWidth) {
+          cancel();
+          mascot.classList.add('has-unavailable-frames');
+        }
       });
     }
   }
