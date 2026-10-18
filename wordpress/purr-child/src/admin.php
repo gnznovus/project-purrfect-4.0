@@ -253,7 +253,7 @@ function purr_child_admin_data(): array {
 }
 
 add_action('admin_menu', static function (): void {
-    add_menu_page('Purr Child Administration', 'Purr Child', 'manage_options',
+    add_menu_page('Purr Assistant Administration', 'Purr Assistant', 'manage_options',
         'purr-child-admin', 'purr_child_render_admin', 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#a7aaad" d="M4.3 10.6 3 2.3l6 3.5a10 10 0 0 1 6 0l6-3.5-1.3 8.3a8.8 8.8 0 0 1-2 8.2C16.1 20.3 14.4 21 12 21s-4.1-.7-5.7-2.2a8.8 8.8 0 0 1-2-8.2ZM8.3 13a1.4 1.4 0 1 0 0 .1Zm8.8 0a1.4 1.4 0 1 0 0 .1ZM10 16.3l2 1.7 2-1.7-2-1.1Z"/></svg>'));
 });
 
@@ -297,7 +297,7 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
     if (in_array($action, ['check_knowledge', 'sync_knowledge'], true)
         && !purr_child_knowledge_dependency_ready(true)) {
         wp_send_json_error([
-            'message' => 'Sophira knowledge services are unavailable. Cached knowledge remains accessible.',
+            'message' => 'Sophia knowledge services are unavailable. Cached knowledge remains accessible.',
             'reason' => 'dependency_unavailable',
             'data' => purr_child_admin_data(),
         ], 503);
@@ -328,10 +328,10 @@ function purr_child_render_admin(): void {
     echo '<div class="wrap purr-console">';
     echo '<div class="purr-console-header"><div class="purr-header-mark" aria-hidden="true">✦</div><div>';
     echo '<div class="purr-eyebrow">PROJECT PURRFECT / WORDPRESS</div>';
-    echo '<h1>Purr Child <span>Control Center</span></h1>';
+    echo '<h1>Purr Assistant <span>Control Center</span></h1>';
     echo '<p>Manage product connections, approved knowledge and network diagnostics.</p>';
-    echo '</div><span class="purr-header-version">CHILD NODE</span></div>';
-    echo '<nav class="purr-console-tabs" aria-label="Purr Child sections">';
+    echo '</div><span class="purr-header-version">PURR ASSISTANT</span></div>';
+    echo '<nav class="purr-console-tabs" aria-label="Purr Assistant sections">';
     echo '<button type="button" class="purr-console-tab is-active" data-purr-tab="registry" aria-selected="true">Registry</button>';
     echo '<button type="button" class="purr-console-tab" data-purr-tab="knowledge" aria-selected="false">Knowledge</button>';
     echo '<button type="button" class="purr-console-tab" data-purr-tab="settings" aria-selected="false">Settings</button></nav>';
