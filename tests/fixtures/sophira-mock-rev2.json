@@ -1,0 +1,14 @@
+{
+  "contract_version": 1,
+  "digest": "b283115f3d7115d8387bb7487f5f72eac427600550cfc72cc6de1967c737531c",
+  "items": [
+    {
+      "content": "Open the mock translation panel to translate content. If the panel is unavailable, check that Mock Translation is active in Plugins.",
+      "id": "translation-edit",
+      "source": "mock-translation://docs/edit"
+    }
+  ],
+  "product_id": "mock-translation",
+  "product_version": "1.0.0",
+  "revision": 2
+}

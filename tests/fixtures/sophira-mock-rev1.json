@@ -1,0 +1,14 @@
+{
+  "contract_version": 1,
+  "digest": "d86d16ccd93e9ace641ada5a03b65baa5a9509131f4a659f4d7a4997e9361bef",
+  "items": [
+    {
+      "content": "Open the mock translation panel to translate content.",
+      "id": "translation-edit",
+      "source": "mock-translation://docs/edit"
+    }
+  ],
+  "product_id": "mock-translation",
+  "product_version": "1.0.0",
+  "revision": 1
+}

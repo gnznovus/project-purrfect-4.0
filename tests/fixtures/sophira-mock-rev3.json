@@ -1,0 +1,23 @@
+{
+  "product_id": "mock-translation",
+  "product_version": "1.0.0",
+  "revision": 3,
+  "contract_version": 1,
+  "items": [
+    {
+      "id": "translation-edit",
+      "content": "Open the mock translation panel to translate content. If the panel is unavailable, check that Mock Translation is active in Plugins.",
+      "source": "mock-translation://docs/edit",
+      "entry_revision": 2,
+      "change_note": null
+    },
+    {
+      "id": "translation-troubleshoot-access",
+      "content": "If the translation panel is inaccessible, check that you are signed in as an administrator.",
+      "source": "mock-translation://docs/troubleshoot/access",
+      "entry_revision": 1,
+      "change_note": "Initial approved access guidance"
+    }
+  ],
+  "digest": "c7a5fd6da79e8620fd61489d0a3032013a9095ac181f868f05dab56193a28acb"
+}

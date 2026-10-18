@@ -1,0 +1,103 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["brain"]
+    volumes:
+      - ollama_models:/root/.ollama
+
+  purra:
+    build:
+      context: .
+      dockerfile: purra.Dockerfile
+    working_dir: /workspace
+    command: ["python", "-m", "purrfect.local_api"]
+    environment:
+      PYTHONPATH: /workspace/src
+      SOPHIRA_DB_PATH: /var/lib/sophira/knowledge.db
+      SOPHIRA_DEV_FAULT_FILE: /tmp/purrfect-sophira-offline
+      PURRA_BRAIN_MODE: ${PURRA_BRAIN_MODE:-deterministic}
+      PURRA_OLLAMA_URL: http://ollama:11434
+      PURRA_OLLAMA_MODEL: ${PURRA_OLLAMA_MODEL:-llama3.2:3b}
+    volumes:
+      - ../..:/workspace:ro
+      - sophira_data:/var/lib/sophira
+    expose:
+      - "8765"
+
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: local-development-only
+      MARIADB_ROOT_PASSWORD: local-root-only
+    volumes:
+      - wp_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+
+  wp:
+    build: .
+    ports:
+      - "8084:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('DISABLE_WP_CRON', true);
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      purra:
+        condition: service_started
+
+  clock:
+    build: .
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do sleep $(($(date +%s) % 60 == 0 ? 60 : 60 - $(date +%s) % 60)); php /opt/purr-child-heartbeat.php || true; done"]
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+      - ./heartbeat.php:/opt/purr-child-heartbeat.php:ro
+    depends_on:
+      - wp
+
+  cli:
+    image: wordpress:cli-php8.3
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: local-development-only
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ../purr-child:/var/www/html/wp-content/plugins/purr-child:ro
+      - ./mock-layout:/var/www/html/wp-content/plugins/mock-layout:ro
+      - ./mock-translation:/var/www/html/wp-content/plugins/mock-translation:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  ollama_models:
+  wp_db:
+  wp_data:
+  sophira_data:

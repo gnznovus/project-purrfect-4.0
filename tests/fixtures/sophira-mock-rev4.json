@@ -1,0 +1,23 @@
+{
+  "product_id": "mock-translation",
+  "product_version": "1.0.0",
+  "revision": 4,
+  "contract_version": 1,
+  "items": [
+    {
+      "id": "translation-edit",
+      "content": "Open the mock translation panel to translate content. If the panel is unavailable, check that Mock Translation is active in Plugins.",
+      "source": "mock-translation://docs/edit",
+      "entry_revision": 2,
+      "change_note": null
+    },
+    {
+      "id": "translation-troubleshoot-access",
+      "content": "If the translation panel is inaccessible, verify your administrator session is active; sign in again through the normal WordPress login if the session expired.",
+      "source": "mock-translation://docs/troubleshoot/access",
+      "entry_revision": 2,
+      "change_note": "Clarify administrator session expiration check"
+    }
+  ],
+  "digest": "41dacf5fb581de0fbff9341327a4438a6ed9677a8083117746ed3642c68ac9c4"
+}
