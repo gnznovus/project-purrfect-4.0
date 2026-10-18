@@ -227,8 +227,8 @@ function purr_child_admin_data(): array {
 }
 
 add_action('admin_menu', static function (): void {
-    add_submenu_page('purr-child-lab', 'Purr Child Administration', 'Administration',
-        'manage_options', 'purr-child-admin', 'purr_child_render_admin');
+    add_menu_page('Purr Child Administration', 'Purr Child', 'manage_options',
+        'purr-child-admin', 'purr_child_render_admin', 'dashicons-admin-generic');
 });
 
 add_action('wp_ajax_purr_child_admin_action', static function (): void {
