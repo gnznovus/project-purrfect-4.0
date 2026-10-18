@@ -180,6 +180,35 @@ function purr_child_admin_run_check(string $component): bool {
     return ($result[$component] ?? null) === 'success';
 }
 
+/** The three real dependencies are probed independently. Unreachable != unhealthy cache. */
+function purr_child_network_health(): array {
+    $leases = get_option('purr_child_knowledge_leases', []);
+    $valid = is_array($leases);
+    foreach ((array) $leases as $lease) {
+        if (!is_array($lease) || !purr_child_knowledge_valid($lease)) $valid = false;
+    }
+    $result = [
+        'child' => ['status' => $valid ? 'healthy' : 'degraded',
+                    'detail' => $valid ? 'Local lease checksums verified' : 'Invalid local knowledge lease'],
+    ];
+    foreach (['purra' => '/v1/health', 'sophira' => '/v1/knowledge/health'] as $id => $path) {
+        $response = wp_remote_get('http://purra:8765' . $path, ['timeout' => 5]);
+        $body = is_wp_error($response) ? null : json_decode(wp_remote_retrieve_body($response), true);
+        $ok = !is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200
+            && is_array($body) && ($body['service'] ?? null) === $id
+            && ($body['status'] ?? null) === 'healthy';
+        $result[$id] = [
+            'status' => $ok ? 'healthy' : 'unavailable',
+            'detail' => $ok ? 'Service probe passed'
+                : ($id === 'sophira' ? 'Knowledge sync unavailable; last-good cache retained'
+                                    : 'Chat service unavailable'),
+        ];
+    }
+    $result['checked_at'] = time();
+    update_option('purr_child_network_health', $result, false);
+    return $result;
+}
+
 function purr_child_admin_data(): array {
     $registry = get_option('purr_child_registry_version_status', []);
     $knowledge = get_option('purr_child_knowledge_version_status', []);
@@ -191,6 +220,7 @@ function purr_child_admin_data(): array {
         'registry' => is_array($registry) ? $registry : [],
         'knowledge' => is_array($knowledge) ? $knowledge : [],
         'heartbeat' => $health,
+        'network' => get_option('purr_child_network_health', []),
         'plugin_version' => get_file_data(dirname(__DIR__) . '/purr-child.php', ['Version' => 'Version'])['Version'],
     ];
 }
@@ -210,6 +240,9 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
     $checks = ['check_registry' => 'registry_versions', 'check_knowledge' => 'knowledge_versions'];
     if (isset($checks[$action])) {
         $ok = purr_child_admin_run_check($checks[$action]);
+    } elseif ($action === 'health_check') {
+        purr_child_network_health();
+        $ok = true;
     } elseif ($action === 'update_registry') {
         $ok = purr_child_admin_update_registry();
     } elseif ($action === 'sync_knowledge') {
