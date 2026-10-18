@@ -31,6 +31,7 @@ function wp_remote_post($url, $args) {
         ]],
     ])];
 }
+function wp_remote_get($url, $args) { $service = str_ends_with($url, '/v1/knowledge/health') ? 'sophira' : 'purra'; return ['code' => 200, 'body' => json_encode(['service' => $service, 'status' => 'healthy'])]; }
 function wp_remote_retrieve_response_code($response) { return $response['code']; }
 function wp_remote_retrieve_body($response) { return $response['body']; }
 function verify(bool $condition, string $message): void {
@@ -72,3 +73,13 @@ verify(count($GLOBALS['published']) === 1, 'Check should make exactly one read-o
 verify($GLOBALS['published'][0]['request']['products'][0]['revision'] === 2,
     'Remote version check must advertise existing local revision');
 echo "PHP admin read-only knowledge check passed\n";
+
+$GLOBALS['options']['purr_child_network_health'] = ['checked_at' => time() - 60, 'purra' => ['status' => 'healthy'], 'sophira' => ['status' => 'unavailable']];
+$GLOBALS['options']['purr_child_heartbeat_knowledge_versions']['failures'] = 1;
+$before_calls = count($GLOBALS['published']);
+purr_child_admin_refresh_dependency_status();
+verify(get_option('purr_child_network_health')['sophira']['status'] === 'healthy', 'Sophira recovery not detected');
+verify(get_option('purr_child_heartbeat_knowledge_versions')['failures'] === 0, 'Stale failure not cleared');
+verify(count($GLOBALS['published']) === $before_calls + 1, 'Recovery must recheck version once');
+verify(get_option('purr_child_knowledge_leases')['mock-translation'] === $old, 'Recovery recheck must not modify lease');
+echo "PHP recovery read-only recheck passed\\n";
