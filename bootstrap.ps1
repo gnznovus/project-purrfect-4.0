@@ -64,8 +64,26 @@ try {
     Compose --profile brain up -d --build ollama purra db wp clock
     if ($SiteB) { Compose --profile brain up -d --build db_b wp_b clock_b }
 
-    Step "Ensuring Ollama model $Model is present (first run downloads it)"
-    Compose exec -T ollama ollama pull $Model
+    Step 'Waiting for Ollama to accept connections'
+    $ollamaReady = $false
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        & docker compose @composeArgs exec -T ollama ollama list *> $null
+        if ($LASTEXITCODE -eq 0) { $ollamaReady = $true; break }
+        Start-Sleep -Seconds 3
+    }
+    if (-not $ollamaReady) { throw 'Ollama service did not become ready.' }
+    Step "Checking required Ollama model $Model"
+    & docker compose @composeArgs exec -T ollama ollama show $Model *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Step "Downloading Ollama model $Model (preserved in its Docker volume)"
+        $pulled = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            & docker compose @composeArgs exec -T ollama ollama pull $Model
+            if ($LASTEXITCODE -eq 0) { $pulled = $true; break }
+            if ($attempt -lt 3) { Step 'Download interrupted; retrying in 5 seconds'; Start-Sleep -Seconds 5 }
+        }
+        if (-not $pulled) { throw 'Ollama model download failed after 3 attempts. Rerun bootstrap to resume.' }
+    }
     Step 'Running actual Ollama inference smoke test'
     $reply = & docker compose @composeArgs exec -T ollama ollama run $Model 'Reply with the single word READY.'
     if ($LASTEXITCODE -ne 0 -or -not (($reply | Out-String).Trim())) {
