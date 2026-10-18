@@ -19,10 +19,24 @@ class KnowledgeItem:
     id: str
     content: str
     source: str
+    entry_revision: int | None = None
+    change_note: str | None = None
 
     def __post_init__(self):
         for value in (self.id, self.content, self.source):
             _required(value)
+        if self.entry_revision is not None and (type(self.entry_revision) is not int or self.entry_revision < 1):
+            raise ValueError("Invalid knowledge entry revision")
+        if self.change_note is not None and (not isinstance(self.change_note, str) or not self.change_note.strip()):
+            raise ValueError("Invalid knowledge change note")
+        if self.change_note is not None and self.entry_revision is None:
+            raise ValueError("Changelog requires an entry revision")
+
+    def payload(self):
+        values = [self.id, self.content, self.source]
+        if self.entry_revision is not None:
+            values.extend((self.entry_revision, self.change_note))
+        return values
 
 
 @dataclass(frozen=True)
@@ -44,7 +58,7 @@ class KnowledgePackage:
     @property
     def digest(self) -> str:
         payload = [self.product_id, self.product_version, self.revision,
-                   self.contract_version, [(i.id, i.content, i.source) for i in sorted(self.items, key=lambda i: i.id)]]
+                   self.contract_version, [i.payload() for i in sorted(self.items, key=lambda i: i.id)]]
         return sha256(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
 
 
@@ -132,6 +146,21 @@ class SophiraCatalog:
             raise ValueError("Revisions must be sequential")
         if not history and package.revision != 1:
             raise ValueError("Initial revision must be one")
+        if history:
+            previous = {i.id: i for i in history[-1].items}
+            for item in package.items:
+                old = previous.get(item.id)
+                if item.entry_revision is not None:
+                    if old is not None and item.content == old.content and item.source == old.source:
+                        if old.entry_revision is not None and item.entry_revision != old.entry_revision:
+                            raise ValueError("Unchanged entry cannot advance revision")
+                    elif old is not None:
+                        if item.change_note is None:
+                            raise ValueError("Changed knowledge needs approved change note")
+                        if old.entry_revision is not None and item.entry_revision != old.entry_revision + 1:
+                            raise ValueError("Entry revision must increment once")
+                elif old is not None and old.entry_revision is not None:
+                    raise ValueError("Cannot remove existing entry revision metadata")
         history.append(package)
 
     def latest(self, product_id: str, product_version: str) -> int | None:
