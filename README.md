@@ -61,7 +61,7 @@ Do **not** rerun WordPress installation on existing sites. On a new lab, use the
 The WordPress admin **Purr Assistant → Control Center** offers:
 - **Registry:** version checking through WordPress native update data; `Update All` uses native upgraders on registered products only.
 - **Knowledge:** expandable Product → Category → Entry tree; read-only `Check Versions`, approved `Update All` synchronization, individual entry revisions and compatibility checks.
-- **Settings:** plugin version, diagnostic bootstrap SHA-256 (not verified release integrity), heartbeat history, and independent Purr Purr Assistant/Purr/Sophira health.
+- **Settings:** plugin version, diagnostic bootstrap SHA-256 (not verified release integrity), heartbeat history, and independent Purr Assistant/Purr/Sophia health.
 
 Knowledge controls pause while Sophia is unavailable; the heartbeat and open admin page detect recovery and automatically refresh read-only version statuses. The floating **Purr** chat widget remains on administrator pages. The chatbox is branded **Purr Assistant**, while messages are spoken by **Purr**. The former full-page **Local Bridge Lab** UI was removed.
 
