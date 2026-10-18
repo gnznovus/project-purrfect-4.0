@@ -90,6 +90,15 @@ function purr_child_check_knowledge_versions(): bool {
         }
         $updates[$update['product_id']] = $update;
     }
+    $bundled = [];
+    foreach ($registry['signals'] as $signal) {
+        if (!is_string($signal['product_id'] ?? null) || !is_array($signal['knowledge'] ?? null)) continue;
+        foreach ($signal['knowledge'] as $entry) {
+            if (is_array($entry) && is_string($entry['id'] ?? null)) {
+                $bundled[$signal['product_id']][$entry['id']] = true;
+            }
+        }
+    }
     $rows = [];
     foreach ($request as $product) {
         $pid = $product['id'];
@@ -117,6 +126,7 @@ function purr_child_check_knowledge_versions(): bool {
                 'product_id' => $pid, 'id' => $item['id'],
                 'source' => $item['source'],
                 'revision' => $prior['entry_revision'] ?? null,
+                'origin' => $prior !== null ? 'lease' : (isset($bundled[$pid][$item['id']]) ? 'built_in' : 'not_synchronized'),
                 'latest_revision' => $item['entry_revision'] ?? null,
                 'status' => $newer ? 'update_available' : 'up_to_date',
             ];
@@ -125,7 +135,7 @@ function purr_child_check_knowledge_versions(): bool {
         foreach ($local_items as $item) {
             $rows[] = [
                 'product_id' => $pid, 'id' => $item['id'], 'source' => $item['source'],
-                'revision' => $item['entry_revision'] ?? null, 'latest_revision' => null,
+                'revision' => $item['entry_revision'] ?? null, 'origin' => 'lease', 'latest_revision' => null,
                 'status' => 'removed_upstream',
             ];
         }
