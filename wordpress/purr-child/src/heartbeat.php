@@ -130,9 +130,15 @@ function purr_child_knowledge_valid(array $package): bool {
     }
     $seen = [];
     foreach ($items as $item) {
-        if (!is_array($item) || count($item) !== 3
+        if (!is_array($item) || !in_array(count($item), [3, 5], true)
             || !array_key_exists('id', $item) || !array_key_exists('content', $item)
             || !array_key_exists('source', $item)
+            || (count($item) === 5 && (!array_key_exists('entry_revision', $item)
+                || !array_key_exists('change_note', $item)
+                || !is_int($item['entry_revision']) || $item['entry_revision'] < 1
+                || ($item['change_note'] !== null && (!is_string($item['change_note'])
+                    || trim($item['change_note']) === ''))))
+            || count(array_diff(array_keys($item), ['id', 'content', 'source', 'entry_revision', 'change_note'])) !== 0
             || !is_string($item['id']) || $item['id'] === ''
             || !is_string($item['content']) || $item['content'] === ''
             || !is_string($item['source']) || $item['source'] === ''
@@ -142,7 +148,14 @@ function purr_child_knowledge_valid(array $package): bool {
         $seen[$item['id']] = true;
     }
     usort($items, static fn($a, $b) => strcmp($a['id'], $b['id']));
-    $triples = array_map(static fn($i) => [$i['id'], $i['content'], $i['source']], $items);
+    $triples = array_map(static function($i) {
+        $record = [$i['id'], $i['content'], $i['source']];
+        if (array_key_exists('entry_revision', $i)) {
+            $record[] = $i['entry_revision'];
+            $record[] = $i['change_note'];
+        }
+        return $record;
+    }, $items);
     $canonical = json_encode([
         $package['product_id'], $package['product_version'], $package['revision'],
         $package['contract_version'], $triples,
