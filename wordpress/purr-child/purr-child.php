@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Purr Child
  * Description: Local discovery of compatible active WordPress products for Purra.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires PHP: 8.0
  */
 
