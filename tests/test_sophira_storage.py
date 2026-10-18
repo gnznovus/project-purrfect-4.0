@@ -66,3 +66,32 @@ def test_running_purra_observes_external_operator_publication(tmp_path):
     finally:
         operator.close()
         running.close()
+
+
+def test_legacy_r2_migration_and_independent_access_r1_to_r2(tmp_path):
+    from pathlib import Path
+    import json
+    from purrfect.sophira_storage import decode
+    path = tmp_path / "approved.db"
+    catalog = DurableSophira(path)
+    fixtures = Path(__file__).parent / "fixtures"
+    try:
+        for number in (1, 2, 3, 4):
+            value = decode((fixtures / f"sophira-mock-rev{number}.json").read_text())
+            catalog.publish_approved(value, approved=True)
+        assert catalog.latest("mock-translation", "1.0.0") == 4
+        edit = catalog.entry_history("mock-translation", "1.0.0", "translation-edit")
+        access = catalog.entry_history("mock-translation", "1.0.0", "translation-troubleshoot-access")
+        assert [entry["entry_revision"] for entry in edit] == [1, 2]
+        assert [entry["entry_revision"] for entry in access] == [1, 2]
+        assert access[-1]["change_note"] == "Clarify administrator session expiration check"
+        assert access[-1]["package_revision"] == 4
+        assert catalog.lease("mock-translation", "1.0.0", 3).to_revision == 4
+    finally:
+        catalog.close()
+    reopened = DurableSophira(path)
+    try:
+        assert reopened.entry_history("mock-translation", "1.0.0", "translation-edit")[-1]["entry_revision"] == 2
+        assert reopened.entry_history("mock-translation", "1.0.0", "translation-troubleshoot-access")[-1]["entry_revision"] == 2
+    finally:
+        reopened.close()
