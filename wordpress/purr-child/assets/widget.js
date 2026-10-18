@@ -10,7 +10,7 @@
   let session = typeof saved.session === 'string' && /^[\w-]{8,128}$/.test(saved.session)
     ? saved.session : (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-session');
   const history = Array.isArray(saved.history) ? saved.history.slice(-60).filter(
-    x => x && ['You','Purra','Source','Connection'].includes(x.role) && typeof x.text === 'string' && x.text.length < 4000) : [];
+    x => x && ['You','Purr','Purra','Source','Connection'].includes(x.role) && typeof x.text === 'string' && x.text.length < 4000) : [];
   let context = saved.context && typeof saved.context === 'object' && !Array.isArray(saved.context) ? saved.context : {};
   let pending = saved.pending && typeof saved.pending === 'object' ? saved.pending : null;
   let opened = Boolean(saved.opened);
@@ -29,13 +29,13 @@
   };
   const fab = element('button', 'pc-fab');
   fab.append(avatar());
-  fab.type = 'button'; fab.setAttribute('aria-label', 'Open Purra');
+  fab.type = 'button'; fab.setAttribute('aria-label', 'Open Purr Assistant');
   const greeting = element('div', 'pc-greeting', "Hi! I'm here if you need help.");
   const panel = element('section', 'pc-panel');
-  panel.setAttribute('aria-label', 'Purra chat');
+  panel.setAttribute('aria-label', 'Purr Assistant chat');
   const head = element('div', 'pc-head');
   const title = element('span', 'pc-title');
-  title.append(avatar(), element('span', '', 'Purra'));
+  title.append(avatar(), element('span', '', 'Purr Assistant'));
   head.append(title);
   const controls = element('div', 'pc-head-actions');
   const newChat = element('button', 'pc-new-chat', '✎');
@@ -43,7 +43,7 @@
   newChat.setAttribute('aria-label', 'New Chat');
   controls.append(newChat);
   const close = element('button', 'pc-close', '×');
-  close.type = 'button'; close.setAttribute('aria-label', 'Collapse Purra');
+  close.type = 'button'; close.setAttribute('aria-label', 'Collapse Purr Assistant');
   controls.append(close);
   head.append(controls);
   const log = element('div', 'pc-log');
@@ -54,7 +54,7 @@
   const form = element('form', 'pc-form');
   const input = element('input');
   input.type = 'text'; input.maxLength = 2000; input.required = true;
-  input.placeholder = 'Ask Purra...'; input.setAttribute('aria-label', 'Message');
+  input.placeholder = 'Ask Purr...'; input.setAttribute('aria-label', 'Message');
   const send = element('button', '', 'Send'); send.type = 'submit';
   form.append(input, send);
   panel.append(head, log, status, form);
@@ -69,7 +69,7 @@
   }
   function renderMessage(entry) {
     const line = element('div', 'pc-line' + (entry.role === 'You' ? ' pc-line-user' : ''));
-    if (entry.role === 'Purra') line.append(avatar());
+    if (entry.role === 'Purr' || entry.role === 'Purra') line.append(avatar());
     const bubble = element('div', 'pc-bubble');
     bubble.append(element('p', 'pc-item' + (entry.role === 'You' ? ' pc-user' : ''), entry.text));
     if (entry.options && Array.isArray(entry.options) && !entry.consumed) {
@@ -108,10 +108,11 @@
     log.replaceChildren();
     for (const entry of history) renderMessage(entry);
   }
-  if (!history.length) history.push({ role: 'Purra', text: "Hi! I'm here if you need help." });
+  if (!history.length) history.push({ role: 'Purr', text: "Hi! I'm here if you need help." });
   // Legacy pending data belonged to the fixed bottom action strip. Never
   // resurrect choices without an associated Purra response.
   if (!history.some(item => item.turn && pending && item.turn === pending.turn)) pending = null;
+  for (const entry of history) if (entry.role === 'Purra') entry.role = 'Purr';
   renderAll();
   redraw();
   fab.addEventListener('click', () => { opened = true; greeted = true; redraw(); save(); input.focus(); });
@@ -122,7 +123,7 @@
     history.length = 0;
     context = {};
     pending = null;
-    history.push({ role: 'Purra', text: "Hi! I'm here if you need help." });
+    history.push({ role: 'Purr', text: "Hi! I'm here if you need help." });
     input.value = '';
     renderAll();
     save();
@@ -136,7 +137,7 @@
     const started = performance.now();
     const update = () => {
       const seconds = Math.floor((performance.now() - started) / 1000);
-      const stage = seconds < 3 ? 'Request sent to Purra.' :
+      const stage = seconds < 3 ? 'Request sent to Purr.' :
         seconds < 7 ? 'Waiting for the Brain...' : 'Still waiting for a response...';
       status.textContent = 'Thinking... ' + seconds + 's\n[verbose] ' + stage;
       status.hidden = false;
@@ -156,7 +157,7 @@
       const data = result.data;
       const choices = data.interaction && Array.isArray(data.interaction.options)
         ? data.interaction.options : null;
-      remember('Purra', data.message || 'No response.', choices);
+      remember('Purr', data.message || 'No response.', choices);
       if (Array.isArray(data.sources) && data.sources.length) {
         remember('Source', data.sources.map(x => x.source).filter(Boolean).join(', '));
       }

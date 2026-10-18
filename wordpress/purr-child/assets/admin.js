@@ -29,8 +29,8 @@
     return '<span class="purr-status">Up to date</span>';
   };
   const controls = (check, update, disabled = false) => '<div class="purr-actions">' +
-    '<button type="button" class="purr-action" data-operation="' + check + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
-    '<button type="button" class="purr-action is-primary" data-operation="' + update + '" ' + (disabled ? 'disabled title="Sophira is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
+    '<button type="button" class="purr-action" data-operation="' + check + '" ' + (disabled ? 'disabled title="Sophia is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↻</span>Check Versions</button>' +
+    '<button type="button" class="purr-action is-primary" data-operation="' + update + '" ' + (disabled ? 'disabled title="Sophia is unavailable"' : '') + '><span class="purr-action-icon" aria-hidden="true">↓</span>Update All</button></div>';
   const head = (title, description, actions) => '<div class="purr-panel-head"><div><h2>' +
     title + '</h2><p>' + description + '</p></div>' + (actions || '') + '</div>';
   const table = (columns, content) => '<div class="purr-table-wrap"><table class="purr-data-table"><thead><tr>' +
@@ -85,18 +85,19 @@
       tree += '</div></details>';
     }
     els.knowledge.innerHTML = head('Knowledge Library',
-      'Approved Sophira entries · independent revisions and read-only version checks',
+      'Approved Sophia entries · independent revisions and read-only version checks',
       controls('check_knowledge', 'sync_knowledge', !available)) +
-      (!available ? '<p class="purr-dependency-note">Sophira is unavailable or not yet verified. Knowledge version checks and updates are paused; local knowledge remains accessible. Controls resume automatically on recovery.</p>' : '') +
+      (!available ? '<p class="purr-dependency-note">Sophia is unavailable or not yet verified. Knowledge version checks and updates are paused; local knowledge remains accessible. Controls resume automatically on recovery.</p>' : '') +
       '<p class="purr-checkline">Last version check: ' + esc(date(knowledge.checked_at)) + '</p>' +
       card('Knowledge explorer', '<div class="purr-tree">' + (tree ||
       '<div class="purr-empty">No verified knowledge versions yet. Use Check Versions to inspect the library.</div>') +
       '</div>', items.length + ' entries');
     const network = data.network || {};
-    const nodes = [['child','Purr Child'],['purra','Purra'],['sophira','Sophira']];
+    const nodes = [['child','Purr Assistant'],['purra','Purr'],['sophira','Sophia']];
     const healthCards = nodes.map(([key,label]) => {
       const node = network[key] || {};
-      return '<div class="purr-health-node"><div class="purr-health-name">' + label + '</div>' +
+      const mark = key === 'child' || key === 'purra' ? '<img class="purr-health-mark" src="' + esc(cfg.purrIcon) + '" alt="" />' : '';
+      return '<div class="purr-health-node"><div class="purr-health-name">' + mark + esc(label) + '</div>' +
         badge(node.status) + '<p>' + esc(node.detail || 'Run Health Check to inspect this component.') + '</p></div>';
     }).join('');
     const heartbeats = data.heartbeat || {};
@@ -108,7 +109,7 @@
       'Local plugin information and independent AI network health checks',
       '<div class="purr-actions"><button type="button" class="purr-action is-primary" data-operation="health_check">Run Health Check</button>' +
       '<button type="button" class="purr-action" id="purr-copy-diagnostics">Copy Diagnostics</button></div>') +
-      '<div class="purr-stat-grid"><div class="purr-stat"><div class="purr-stat-label">Purr Child version</div>' +
+      '<div class="purr-stat-grid"><div class="purr-stat"><div class="purr-stat-label">Purr Assistant version</div>' +
       '<div class="purr-stat-value">' + esc(data.plugin_version || 'Unknown') + '</div></div>' +
       '<div class="purr-stat"><div class="purr-stat-label">Last network check</div>' +
       '<div class="purr-stat-value" style="font-size:16px">' + esc(date(network.checked_at)) + '</div></div></div>' +
@@ -138,7 +139,7 @@
         if (result.data?.reason === 'dependency_unavailable') {
           data = result.data.data;
           draw();
-          feedback.textContent = 'Sophira is unavailable. Knowledge actions are paused.';
+          feedback.textContent = 'Sophia is unavailable. Knowledge actions are paused.';
           return;
         }
         throw new Error(result.data?.message || (typeof result.data === 'string' ? result.data : 'Request failed'));
@@ -169,8 +170,8 @@
           draw();
           feedback.classList.remove('is-error');
           feedback.textContent = knowledgeAvailable()
-            ? 'Sophira has recovered. Knowledge controls are available.'
-            : 'Sophira is unavailable. Knowledge controls are paused.';
+            ? 'Sophia has recovered. Knowledge controls are available.'
+            : 'Sophia is unavailable. Knowledge controls are paused.';
         } else if (document.querySelector('[data-purr-tab="settings"].is-active')) draw();
       }
     } catch (_) {
@@ -206,5 +207,49 @@
       for (const [name,panel] of Object.entries(els)) panel.hidden = name !== selected;
     }
   });
+  // Mascot timers run independently of the AJAX-rendered panels.
+  const mascot = document.querySelector('.purr-header-mark');
+  if (mascot) {
+    const open = mascot.querySelector('.purr-head-open');
+    const closed = mascot.querySelector('.purr-head-closed');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let timer = null;
+    let held = false;
+    const showClosed = value => mascot.classList.toggle('is-eyes-closed', value);
+    const cancel = () => { if (timer !== null) clearTimeout(timer); timer = null; };
+    const schedule = () => {
+      cancel();
+      if (held || document.hidden || reduced.matches) return;
+      timer = setTimeout(() => {
+        if (held || document.hidden || reduced.matches) return;
+        showClosed(true);
+        timer = setTimeout(() => { showClosed(false); schedule(); }, 500);
+      }, 6000 + Math.random() * 6000);
+    };
+    const hold = () => { held = true; cancel(); showClosed(true); };
+    const release = () => { held = false; showClosed(false); schedule(); };
+    mascot.addEventListener('pointerenter', hold);
+    mascot.addEventListener('pointerleave', release);
+    mascot.addEventListener('focus', hold);
+    mascot.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', () => {
+      cancel(); showClosed(held); if (!document.hidden) schedule();
+    });
+    if (reduced.addEventListener) reduced.addEventListener('change', () => {
+      showClosed(held); schedule();
+    });
+    // Start the clock independently of image decoding: an offscreen/hidden
+    // frame may never resolve decode() in some browsers despite being usable.
+    // Hover switching already proves both frames can be displayed.
+    if (open && closed) {
+      schedule();
+      Promise.all([open, closed].map(img => img.decode().catch(() => {}))).then(() => {
+        if (!open.naturalWidth || !closed.naturalWidth) {
+          cancel();
+          mascot.classList.add('has-unavailable-frames');
+        }
+      });
+    }
+  }
   draw();
 })();

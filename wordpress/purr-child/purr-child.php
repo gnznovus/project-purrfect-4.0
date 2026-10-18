@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Purr Child
+ * Plugin Name: Purr Assistant
  * Description: Local discovery of compatible active WordPress products for Purra.
  * Version: 0.2.0
  * Requires PHP: 8.0
