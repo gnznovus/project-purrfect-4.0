@@ -80,6 +80,11 @@ class DurableSophira(SophiraCatalog):
             if package.revision > (history[-1].revision if history else 0):
                 super().publish_approved(package, approved=True)
 
+    def entry_history(self, product_id, product_version, entry_id):
+        with self._lock:
+            self._refresh_from_db()
+            return super().entry_history(product_id, product_version, entry_id)
+
     def latest(self, product_id, product_version):
         with self._lock:
             self._refresh_from_db()
