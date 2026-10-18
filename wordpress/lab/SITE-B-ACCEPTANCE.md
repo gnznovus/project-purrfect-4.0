@@ -14,8 +14,8 @@ docker compose @compose ps
 Open http://localhost:8085/wp-admin/install.php and perform a **fresh Site B setup** with distinct local test credentials. Do not import Site A data. Alternatively, if you prefer WP-CLI, use:
 
 ```powershell
-docker compose @compose --profile tools run --rm cli_b wp core install --url=http://localhost:8085 --title="Purrfect Lab B" --admin_user=lab_b_admin --admin_email=lab-b@example.test --prompt=admin_password
-docker compose @compose --profile tools run --rm cli_b wp plugin activate purr-child mock-translation
+docker compose @compose --profile tools run --rm cli_b core install --url=http://localhost:8085 --title="Purrfect Lab B" --admin_user=lab_b_admin --admin_email=lab-b@example.test --prompt=admin_password
+docker compose @compose --profile tools run --rm cli_b plugin activate purr-child mock-translation
 ```
 
 If Site B is already installed, do not run the install command again. The browser-based setup is simpler for first-run acceptance.
