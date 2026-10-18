@@ -1,29 +1,6 @@
 <?php
-/** Local POC admin chat. WordPress remains the only browser-facing server. */
+/** Admin-only Purra chat transport and floating assistant; no legacy lab page. */
 defined('ABSPATH') || exit;
-
-add_action('admin_menu', static function (): void {
-    add_menu_page('Purr Child Lab', 'Purr Child Lab', 'manage_options',
-        'purr-child-lab', 'purr_child_render_chat', 'dashicons-format-chat');
-});
-
-function purr_child_render_chat(): void {
-    if (!current_user_can('manage_options')) {
-        return;
-    }
-    echo '<div class="wrap"><h1>Purr Child — Local Bridge Lab</h1>';
-    echo '<p>Local proof of concept using the registered mock products.</p>';
-    echo '<div id="purr-child-chat" style="max-width:720px;background:#fff;border:1px solid #ddd;padding:16px">';
-    echo '<div id="purr-log" style="min-height:140px;max-height:420px;overflow:auto;white-space:pre-wrap"></div>';
-    echo '<div id="purr-options"></div>';
-    echo '<p><input id="purr-question" style="width:78%" aria-label="Ask Purra" placeholder="Ask about a product or WordPress" /> ';
-    echo '<button id="purr-send" class="button button-primary">Send</button></p></div></div>';
-    wp_enqueue_script('purr-child-chat', plugins_url('../assets/chat.js', __FILE__), [], '0.1.1', true);
-    wp_add_inline_script('purr-child-chat', 'window.purrChildLab = ' . wp_json_encode([
-        'endpoint' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('purr_child_lab'),
-    ]) . ';', 'before');
-}
 
 add_action('wp_ajax_purr_child_chat', static function (): void {
     check_ajax_referer('purr_child_lab', 'nonce');
