@@ -157,7 +157,7 @@ class SophiraCatalog:
                     elif old is not None:
                         if item.change_note is None:
                             raise ValueError("Changed knowledge needs approved change note")
-                        previous_revision = self.entry_history(package.product_id, package.product_version, item.id)
+                        previous_revision = SophiraCatalog.entry_history(self, package.product_id, package.product_version, item.id)
                         expected = previous_revision[-1]["entry_revision"] + 1 if previous_revision else 1
                         if item.entry_revision != expected:
                             raise ValueError("Entry revision must increment once")
