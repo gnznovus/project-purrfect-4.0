@@ -77,6 +77,27 @@ verify($digest === get_option('purr_child_registry_digest'), 'Identical registry
 $GLOBALS['snapshot']['active'][] = ['kind' => 'plugin', 'key' => 'mock/main.php'];
 purr_child_refresh_registry();
 verify($digest !== get_option('purr_child_registry_digest'), 'Activation must update digest');
+// An explicitly targeted manual check must NEVER fire another due component.
+$GLOBALS['components']['read_only'] = [
+    'interval' => 60,
+    'callback' => static function (): bool {
+        $GLOBALS['calls'][] = 'read_only';
+        return true;
+    },
+];
+$GLOBALS['components']['mutating'] = [
+    'interval' => 60,
+    'callback' => static function (): bool {
+        $GLOBALS['calls'][] = 'mutating';
+        return true;
+    },
+];
+$before = count($GLOBALS['calls']);
+$manual = purr_child_heartbeat_tick(2000, ['read_only']);
+verify($manual === ['read_only' => 'success'],
+    'Targeted version check must not run other due components');
+verify(array_slice($GLOBALS['calls'], $before) === ['read_only'],
+    'Targeted check unexpectedly triggered a mutating callback');
 echo "Heartbeat tests passed\n";
 
 // Real WordPress invokes action listeners without a timestamp argument.
