@@ -340,7 +340,7 @@ function purr_child_render_admin(): void {
     echo '<section id="purr-admin-knowledge" class="purr-admin-panel" hidden></section>';
     echo '<section id="purr-admin-settings" class="purr-admin-panel" hidden></section></div>';
     wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.0');
-    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.1', true);
+    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.2', true);
     wp_add_inline_script('purr-child-admin', 'window.purrChildAdmin=' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('purr_child_admin'),
         'initial' => purr_child_admin_data(),
