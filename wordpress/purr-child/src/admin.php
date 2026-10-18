@@ -254,7 +254,7 @@ function purr_child_admin_data(): array {
 
 add_action('admin_menu', static function (): void {
     add_menu_page('Purr Assistant Administration', 'Purr Assistant', 'manage_options',
-        'purr-child-admin', 'purr_child_render_admin', 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#a7aaad" d="M4.3 10.6 3 2.3l6 3.5a10 10 0 0 1 6 0l6-3.5-1.3 8.3a8.8 8.8 0 0 1-2 8.2C16.1 20.3 14.4 21 12 21s-4.1-.7-5.7-2.2a8.8 8.8 0 0 1-2-8.2ZM8.3 13a1.4 1.4 0 1 0 0 .1Zm8.8 0a1.4 1.4 0 1 0 0 .1ZM10 16.3l2 1.7 2-1.7-2-1.1Z"/></svg>'));
+        'purr-child-admin', 'purr_child_render_admin', plugins_url('../assets/purr-p2-sidebar.png', __FILE__));
 });
 
 /** Re-check version statuses after a service recovery without updating leases. */
@@ -326,7 +326,7 @@ add_action('wp_ajax_purr_child_admin_action', static function (): void {
 function purr_child_render_admin(): void {
     if (!current_user_can('manage_options')) return;
     echo '<div class="wrap purr-console">';
-    echo '<div class="purr-console-header"><div class="purr-header-mark" aria-hidden="true">✦</div><div>';
+    echo '<div class="purr-console-header"><div class="purr-header-mark" aria-label="Purr" role="img" tabindex="0"><img class="purr-head-open" src="' . esc_url(plugins_url('../assets/purr-header-open.png', __FILE__)) . '" alt="" /><img class="purr-head-closed" src="' . esc_url(plugins_url('../assets/purr-header-closed.png', __FILE__)) . '" alt="" /></div><div>';
     echo '<div class="purr-eyebrow">PROJECT PURRFECT / WORDPRESS</div>';
     echo '<h1>Purr Assistant <span>Control Center</span></h1>';
     echo '<p>Manage product connections, approved knowledge and network diagnostics.</p>';
@@ -339,10 +339,11 @@ function purr_child_render_admin(): void {
     echo '<section id="purr-admin-registry" class="purr-admin-panel"></section>';
     echo '<section id="purr-admin-knowledge" class="purr-admin-panel" hidden></section>';
     echo '<section id="purr-admin-settings" class="purr-admin-panel" hidden></section></div>';
-    wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.0');
-    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.2', true);
+    wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.3');
+    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.3', true);
     wp_add_inline_script('purr-child-admin', 'window.purrChildAdmin=' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('purr_child_admin'),
         'initial' => purr_child_admin_data(),
+        'purrIcon' => plugins_url('../assets/purr-p2-sidebar.png', __FILE__),
     ]) . ';', 'before');
 }
