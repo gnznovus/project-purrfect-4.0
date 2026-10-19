@@ -366,3 +366,18 @@ def test_lost_user_is_guided_not_rejected_as_unsupported():
         assert answer["interaction"]["key"] == "support_scope"
         assert answer["message"].startswith("I can help")
         assert answer["status"] != "unsupported"
+
+
+def test_social_and_generic_help_use_one_model_call_each():
+    class CountingBrain:
+        def __init__(self):
+            self.calls = []
+        async def complete(self, system, user, **kwargs):
+            self.calls.append((system, kwargs))
+            return '{"response":"Happy to help! What would you like to explore?","options":[]}'
+    for phrase in ("Hi Purr!", "How are you today?", "I need help"):
+        brain = CountingBrain()
+        answer = respond(request("one-call-" + phrase, phrase), LocalState(model=brain))
+        assert len(brain.calls) == 1
+        assert brain.calls[0][1]["temperature"] == 0.65
+        assert answer["message"].startswith("Happy to help")
