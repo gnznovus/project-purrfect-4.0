@@ -100,7 +100,12 @@
         const bits = [stage.stage, stage.result, stage.ms == null ? '' : stage.ms + ' ms',
           stage.status ? 'status: ' + stage.status : '',
           stage.buttons == null ? '' : stage.buttons + ' buttons',
-          stage.sources == null ? '' : stage.sources + ' sources'].filter(Boolean);
+          stage.sources == null ? '' : stage.sources + ' sources',
+          stage.load_ms == null ? '' : 'model load: ' + stage.load_ms + ' ms',
+          stage.prompt_eval_ms == null ? '' : 'prompt: ' + stage.prompt_eval_ms + ' ms',
+          stage.eval_ms == null ? '' : 'generation: ' + stage.eval_ms + ' ms',
+          stage.prompt_eval_count == null ? '' : 'input: ' + stage.prompt_eval_count + ' tokens',
+          stage.eval_count == null ? '' : 'output: ' + stage.eval_count + ' tokens'].filter(Boolean);
         list.append(element('li', '', bits.join(' · ')));
       }
       details.append(list);
