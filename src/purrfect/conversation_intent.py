@@ -100,7 +100,7 @@ async def draft_welcome(model, message: str, available: dict[str, str]):
     response = data["response"]
     if not isinstance(response, str) or not 2 <= len(response) <= 260:
         return None
-    if re.search(r"[\r\n`{}<>]|https?://|www\\.|\\b(?:click|install|delete|run|execute|configure|navigate|upload|download|activate|deactivate|paste|command)\\b", response, re.I):
+    if re.search(r"[\r\n`{}<>]|https?://|www\.|\b(?:click|install|delete|run|execute|configure|navigate|upload|download|activate|deactivate|paste|command)\b", response, re.I):
         return None
     options = data["options"]
     if not isinstance(options, list) or len(options) > 4:
