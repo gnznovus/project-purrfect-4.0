@@ -108,9 +108,10 @@ try {
     try {
         Step "Inference running; reporting every 10 seconds (timeout: $inferenceTimeoutSeconds seconds)"
         $inferenceProcess = Start-Process -FilePath 'docker.exe' -ArgumentList $inferenceCommandLine -NoNewWindow -PassThru -RedirectStandardOutput $inferenceOut -RedirectStandardError $inferenceErr
-        while (-not $inferenceProcess.HasExited) {
-            Start-Sleep -Seconds 2
-            $inferenceProcess.Refresh()
+        if ($null -eq $inferenceProcess) {
+            throw 'Could not start the Docker inference probe: Start-Process did not return a process.'
+        }
+        while (-not $inferenceProcess.WaitForExit(2000)) {
             $elapsed = [int]$inferenceClock.Elapsed.TotalSeconds
             if ($elapsed -ge $inferenceTimeoutSeconds) {
                 Stop-Process -Id $inferenceProcess.Id -Force -ErrorAction SilentlyContinue
@@ -121,7 +122,8 @@ try {
             }
         }
         $inferenceClock.Stop()
-        $reply = if (Test-Path $inferenceOut) { (Get-Content $inferenceOut -Raw).Trim() } else { '' }
+        $inferenceProcess.Refresh()
+        $reply = if ((Test-Path $inferenceOut) -and (Get-Item $inferenceOut).Length -gt 0) { (Get-Content $inferenceOut -Raw).Trim() } else { '' }
         if ($inferenceProcess.ExitCode -ne 0 -or -not $reply) {
             $diagnostic = if (Test-Path $inferenceErr) { (Get-Content $inferenceErr -Raw).Trim() } else { '' }
             throw "Ollama inference failed (exit $($inferenceProcess.ExitCode)): $diagnostic"
