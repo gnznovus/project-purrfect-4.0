@@ -61,7 +61,7 @@ def test_inactive_product_evidence_cannot_be_replayed():
 
 
 def test_correction_to_other_product_uses_current_inventory():
-    state = LocalState(model=ScriptedBrain('{"selection":"mock-layout"}'))
+    state = LocalState(model=ScriptedBrain('{"intent":"product","target":"mock-layout","response":null}'))
     guided(state)
     answer = respond(request("conv", "No, I meant Layout Engine"), state)
     assert answer["scope"] == "product"
@@ -89,9 +89,10 @@ def test_invalid_outcome_cannot_be_restored():
 def test_model_social_move_does_not_restart_product_scope():
     class Model:
         async def complete(self, system, user):
-            if "Choose exactly one conversational intent" in system:
-                return '{"kind":"social"}'
-            return '{"selection":"mock-layout"}'
+            import json
+            if json.loads(user)["message"] == "Could we chat briefly?":
+                return '{"intent":"social","target":null,"response":"Of course! What is on your mind?"}'
+            return '{"intent":"product","target":"mock-layout","response":null}'
     state = LocalState(model=Model())
     first = guided(state)
     reply = respond(request("conv", "Could we chat briefly?"), state)
@@ -103,13 +104,10 @@ def test_model_social_move_does_not_restart_product_scope():
 def test_dynamic_greeting_and_unresolved_without_prior_guidance():
     class ConversationalBrain:
         async def complete(self, system, user):
-            if "Choose exactly one conversational intent" in system:
-                import json
-                msg = json.loads(user)["message"]
-                if msg.lower().startswith("hi"):
-                    return '{"kind":"social","reply":"Hello there! What can I help you with?"}'
-                return '{"kind":"unresolved","reply":"Oh, what were you trying to do?"}'
-            raise AssertionError("Conversation must not be classified as unsupported")
+            import json
+            if json.loads(user)["message"].lower().startswith("hi"):
+                return '{"intent":"social","target":null,"response":"Hello there! What can I help you with?"}'
+            return '{"intent":"unresolved","target":null,"response":"Oh, what were you trying to do?"}'
     state = LocalState(model=ConversationalBrain())
     hello = respond(request("natural", "Hi !!"), state)
     assert hello["message"] == "Hello there! What can I help you with?"
@@ -132,9 +130,10 @@ def test_bad_model_conversation_reply_falls_back_without_instructions():
 def test_resolution_phrasings_override_contradictory_brain_classification():
     class ConfusedBrain:
         async def complete(self, system, user):
-            if "Choose exactly one conversational intent" in system:
-                return '{"kind":"unresolved","reply":"What did not work?"}'
-            return '{"selection":"mock-layout"}'
+            import json
+            if json.loads(user)["message"] == "How do I edit layout blocks?":
+                return '{"intent":"product","target":"mock-layout","response":null}'
+            return '{"intent":"unresolved","target":null,"response":"What did not work?"}'
 
     for phrase in (
         "oh sorry it working now", "thank !! it work now",

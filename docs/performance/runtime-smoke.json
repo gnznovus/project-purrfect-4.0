@@ -1,0 +1,73 @@
+{
+  "status": "grounded",
+  "scope": "product",
+  "message": "Open the layout editor to edit blocks.",
+  "interaction": null,
+  "sources": [
+    {
+      "id": "a",
+      "source": "mock://layout",
+      "product_id": "mock-layout"
+    }
+  ],
+  "routing": "unified-intent",
+  "context": {
+    "last_question": "How do I edit blocks in mock-layout?",
+    "last_scope": "mock-layout",
+    "pending": false,
+    "revision": 2,
+    "outcome": "open",
+    "evidence_id": "a"
+  },
+  "debug": {
+    "duration_ms": 2538.42,
+    "model_calls": 1,
+    "stages": [
+      {
+        "stage": "Discovery and knowledge",
+        "ms": 0.08
+      },
+      {
+        "stage": "Session lock",
+        "ms": 0.0
+      },
+      {
+        "stage": "Ollama",
+        "model_calls": 1,
+        "http_ms": 2060.6,
+        "done_reason": "stop",
+        "system_chars": 1925,
+        "user_chars": 301,
+        "response_chars": 56,
+        "total_ms": 2015.71,
+        "load_ms": 1.24,
+        "prompt_eval_ms": 290.12,
+        "eval_ms": 1719.12,
+        "prompt_eval_count": 465,
+        "eval_count": 19,
+        "prompt_eval_tokens_per_second": 1602.79,
+        "eval_tokens_per_second": 11.05,
+        "transport_ms": 44.89,
+        "result": "Parsed JSON",
+        "ms": 2062.08
+      },
+      {
+        "stage": "Validation",
+        "result": "Intent: product",
+        "target": "mock-layout"
+      },
+      {
+        "stage": "Unified decision",
+        "result": "product",
+        "ms": 2537.72
+      },
+      {
+        "stage": "Final route",
+        "result": "unified-intent",
+        "status": "grounded",
+        "buttons": 0,
+        "sources": 1
+      }
+    ]
+  }
+}

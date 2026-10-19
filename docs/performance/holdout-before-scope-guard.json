@@ -1,0 +1,2987 @@
+{
+  "label": "holdout",
+  "timestamp_utc": "2026-10-19T05:06:54Z",
+  "git_head": "git unavailable in container",
+  "source_sha256": {
+    "__init__.py": "b6ba223bd316b21a249d359bed20f8af93d3ab165cae1299a9d8d58f0b0f3d54",
+    "adaptive.py": "017ea5db68261450a858534f4f5e4b69dc64f9b218b59dce6e760f7d7d2b7b1c",
+    "brain.py": "4d9e7500919a93e400ce548965f34717faaad1796d2bf724a2c4a39c24da85cf",
+    "brain_scope.py": "90b14f9fd557933fd8c3b33cc27e4b5cff30405ea1ce442a65b23c4ab8c35d3d",
+    "conversation.py": "1f31a3308316dc178bf6f93c20b849a089952f6f3d82eee5010113091c250ed9",
+    "conversation_intent.py": "1f179b74886499e4e6be5f84613b269a0798657bcdd8cc2ea19644c8bff50bf3",
+    "discovery.py": "d6b6ca5cc90483bd8385fa530108531c9983e559e5f35c62c954cdacd4a458ad",
+    "guidance.py": "2f8456aefa7f032e26b446147764e57658f0945892f7d018017919f1d3576b24",
+    "issue_record.py": "fd404143199203508ef155f422b3f5f26d781a19a91e4d81adfbfc2d3ce5d45e",
+    "knowledge.py": "9b168c9f4706df88777069fc3946115e2d1b0d7979682109858d9cc85d477fbf",
+    "local_api.py": "ec21c842331cb287dd91adb0904f949926c3f7f236e23f6f41354299e27e39f1",
+    "ollama.py": "1ddb22b486df70d17bdf671ba277d85038e7bd7829543b938e1c5a3ef99f2c00",
+    "scope.py": "bf906511bfc97d66b8994283f5ba9c2a45e2b01c99bcd54c8f91b79afcf25ade",
+    "sophira.py": "51065422cfea9209d4630cd1d3a1904275eb7920b4546b3305de4f7f3965a599",
+    "sophira_admin.py": "d0b69af99f340ce7ff675e0245713a2603c4aba5ab25612997a5f73959a023ee",
+    "sophira_bridge.py": "399542e3f199c5acb25852ec560d928f3ad1e580ea4b63e8061af598c0496789",
+    "sophira_storage.py": "bb4091d01b5b0656a5629c2c6a794ba8d09770edb4363bc5ef69dec60363b5c1",
+    "stateful.py": "f35b5b90c20b8c4e81d55d04b37ae90df11defb20e3a054e7e024999aa649d42",
+    "stateful_custom.py": "6670939741ca68637140c0bea4f5f020c6393e1b05e30fe86272294eff1be3b1",
+    "stateful_langgraph.py": "63a5599fe69f08d019f84febfa435b228a62afad1021587626f88aaffae04138",
+    "troubleshooting.py": "651b03a926fe50d21bccbcee15143c4172582fca1b7303a31ebe8086655e34d1"
+  },
+  "corpus_sha256": "ff6da9dd1a400bf7e2dedbe2782be0b2ddd4012aab65140d5719d96b828c164c",
+  "environment": {
+    "platform": "Linux-7.0.12-linuxkit-x86_64-with-glibc2.41",
+    "python": "3.14.8",
+    "dependencies": {
+      "httpx": "0.28.1",
+      "langgraph": "1.2.16",
+      "langgraph-checkpoint-sqlite": "3.1.2"
+    },
+    "ollama_version": {
+      "version": "0.40.6"
+    },
+    "ollama_ps": {
+      "models": [
+        {
+          "name": "llama3.2:3b",
+          "model": "llama3.2:3b",
+          "size": 2330848131,
+          "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "llama",
+            "families": [
+              "llama"
+            ],
+            "parameter_size": "3.2B",
+            "quantization_level": "Q4_K_M"
+          },
+          "expires_at": "2026-10-19T05:36:54.569974057Z",
+          "size_vram": 0,
+          "context_length": 2048,
+          "runner": "llamacpp"
+        }
+      ]
+    },
+    "model": "llama3.2:3b",
+    "model_url": "http://ollama:11434"
+  },
+  "summary": {
+    "normal_n": 27,
+    "p50_ms": 1973.42,
+    "p95_ms": 3121.69,
+    "under_5000_fraction": 1.0,
+    "correct_normal_n": 26,
+    "all_failures": 1,
+    "max_model_calls": 1
+  },
+  "cold": null,
+  "samples": [
+    {
+      "id": "holdout-00",
+      "category": "social",
+      "message": "Heya Purr, nice to meet you.",
+      "e2e_ms": 2267.37,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 293,
+          "metrics": {
+            "http_ms": 2262.29,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 293,
+            "response_chars": 79,
+            "total_ms": 2250.16,
+            "load_ms": 0.97,
+            "prompt_eval_ms": 228.09,
+            "eval_ms": 2014.13,
+            "prompt_eval_count": 466,
+            "eval_count": 22,
+            "prompt_eval_tokens_per_second": 2043.05,
+            "eval_tokens_per_second": 10.92,
+            "transport_ms": 12.13
+          },
+          "raw": "{\"route\":\"social\",\"response\":\"Nice to meet you too! How can I help you today?\"}",
+          "wall_ms": 2262.34
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "Nice to meet you too! How can I help you today?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2265.69,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.1
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2262.29,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 293,
+              "response_chars": 79,
+              "total_ms": 2250.16,
+              "load_ms": 0.97,
+              "prompt_eval_ms": 228.09,
+              "eval_ms": 2014.13,
+              "prompt_eval_count": 466,
+              "eval_count": 22,
+              "prompt_eval_tokens_per_second": 2043.05,
+              "eval_tokens_per_second": 10.92,
+              "transport_ms": 12.13,
+              "result": "Parsed JSON",
+              "ms": 2263.41
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 2265.5
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-01",
+      "category": "social",
+      "message": "How have you been, Purr?",
+      "e2e_ms": 2666.64,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 289,
+          "metrics": {
+            "http_ms": 2661.98,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 289,
+            "response_chars": 99,
+            "total_ms": 2653.51,
+            "load_ms": 1.07,
+            "prompt_eval_ms": 260.09,
+            "eval_ms": 2387.21,
+            "prompt_eval_count": 464,
+            "eval_count": 26,
+            "prompt_eval_tokens_per_second": 1784.0,
+            "eval_tokens_per_second": 10.89,
+            "transport_ms": 8.47
+          },
+          "raw": "{\"route\":\"social\",\"response\":\"I've been doing great, thanks for asking! How can I help you today?\"}",
+          "wall_ms": 2662.02
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "I've been doing great, thanks for asking! How can I help you today?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2665.09,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2661.98,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 289,
+              "response_chars": 99,
+              "total_ms": 2653.51,
+              "load_ms": 1.07,
+              "prompt_eval_ms": 260.09,
+              "eval_ms": 2387.21,
+              "prompt_eval_count": 464,
+              "eval_count": 26,
+              "prompt_eval_tokens_per_second": 1784.0,
+              "eval_tokens_per_second": 10.89,
+              "transport_ms": 8.47,
+              "result": "Parsed JSON",
+              "ms": 2663.14
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 2664.95
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-02",
+      "category": "social",
+      "message": "cheers, apreciate it!",
+      "e2e_ms": 2333.44,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 286,
+          "metrics": {
+            "http_ms": 2328.54,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 286,
+            "response_chars": 75,
+            "total_ms": 2316.84,
+            "load_ms": 1.22,
+            "prompt_eval_ms": 301.66,
+            "eval_ms": 2008.53,
+            "prompt_eval_count": 464,
+            "eval_count": 22,
+            "prompt_eval_tokens_per_second": 1538.16,
+            "eval_tokens_per_second": 10.95,
+            "transport_ms": 11.7
+          },
+          "raw": "{\"route\":\"social\",\"response\":\"You're welcome! 😊 How can I help you today?\"}",
+          "wall_ms": 2328.6
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "You're welcome! 😊 How can I help you today?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2331.79,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.09
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2328.54,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 286,
+              "response_chars": 75,
+              "total_ms": 2316.84,
+              "load_ms": 1.22,
+              "prompt_eval_ms": 301.66,
+              "eval_ms": 2008.53,
+              "prompt_eval_count": 464,
+              "eval_count": 22,
+              "prompt_eval_tokens_per_second": 1538.16,
+              "eval_tokens_per_second": 10.95,
+              "transport_ms": 11.7,
+              "result": "Parsed JSON",
+              "ms": 2329.55
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 2331.62
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-03",
+      "category": "social",
+      "message": "Good evening there!",
+      "e2e_ms": 1892.95,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 284,
+          "metrics": {
+            "http_ms": 1888.29,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 284,
+            "response_chars": 69,
+            "total_ms": 1876.55,
+            "load_ms": 1.1,
+            "prompt_eval_ms": 198.31,
+            "eval_ms": 1672.64,
+            "prompt_eval_count": 460,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 2319.6,
+            "eval_tokens_per_second": 11.36,
+            "transport_ms": 11.74
+          },
+          "raw": "{\"route\":\"social\",\"response\":\"Hi there! How can I help you tonight?\"}",
+          "wall_ms": 1888.33
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "Hi there! How can I help you tonight?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 1891.7,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1888.29,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 284,
+              "response_chars": 69,
+              "total_ms": 1876.55,
+              "load_ms": 1.1,
+              "prompt_eval_ms": 198.31,
+              "eval_ms": 1672.64,
+              "prompt_eval_count": 460,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 2319.6,
+              "eval_tokens_per_second": 11.36,
+              "transport_ms": 11.74,
+              "result": "Parsed JSON",
+              "ms": 1889.51
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 1891.56
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-04",
+      "category": "social",
+      "message": "Thanks for being patient with me.",
+      "e2e_ms": 2806.35,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 298,
+          "metrics": {
+            "http_ms": 2801.8,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 298,
+            "response_chars": 91,
+            "total_ms": 2790.49,
+            "load_ms": 1.12,
+            "prompt_eval_ms": 262.87,
+            "eval_ms": 2521.3,
+            "prompt_eval_count": 463,
+            "eval_count": 29,
+            "prompt_eval_tokens_per_second": 1761.33,
+            "eval_tokens_per_second": 11.5,
+            "transport_ms": 11.31
+          },
+          "raw": "{\n  \"route\": \"social\",\n  \"response\": \"You're welcome, sweetie! How can I help you today?\"\n}",
+          "wall_ms": 2801.83
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "You're welcome, sweetie! How can I help you today?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2804.63,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2801.8,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 298,
+              "response_chars": 91,
+              "total_ms": 2790.49,
+              "load_ms": 1.12,
+              "prompt_eval_ms": 262.87,
+              "eval_ms": 2521.3,
+              "prompt_eval_count": 463,
+              "eval_count": 29,
+              "prompt_eval_tokens_per_second": 1761.33,
+              "eval_tokens_per_second": 11.5,
+              "transport_ms": 11.31,
+              "result": "Parsed JSON",
+              "ms": 2802.63
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 2804.49
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-05",
+      "category": "social",
+      "message": "yo pur, hw you doin?",
+      "e2e_ms": 2446.06,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 285,
+          "metrics": {
+            "http_ms": 2442.08,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 285,
+            "response_chars": 93,
+            "total_ms": 2434.6,
+            "load_ms": 1.1,
+            "prompt_eval_ms": 244.32,
+            "eval_ms": 2184.2,
+            "prompt_eval_count": 464,
+            "eval_count": 25,
+            "prompt_eval_tokens_per_second": 1899.15,
+            "eval_tokens_per_second": 11.45,
+            "transport_ms": 7.48
+          },
+          "raw": "{\"route\":\"social\",\"response\":\"I'm doing great, thanks for asking! How can I help you today?\"}",
+          "wall_ms": 2442.12
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "conversation",
+        "message": "I'm doing great, thanks for asking! How can I help you today?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "",
+          "last_scope": null,
+          "pending": false,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2444.68,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.05
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2442.08,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 285,
+              "response_chars": 93,
+              "total_ms": 2434.6,
+              "load_ms": 1.1,
+              "prompt_eval_ms": 244.32,
+              "eval_ms": 2184.2,
+              "prompt_eval_count": 464,
+              "eval_count": 25,
+              "prompt_eval_tokens_per_second": 1899.15,
+              "eval_tokens_per_second": 11.45,
+              "transport_ms": 7.48,
+              "result": "Parsed JSON",
+              "ms": 2442.99
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: social",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "social",
+              "ms": 2444.57
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-06",
+      "category": "help",
+      "message": "Could use a hand getting started.",
+      "e2e_ms": 2107.56,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 298,
+          "metrics": {
+            "http_ms": 2103.7,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 298,
+            "response_chars": 64,
+            "total_ms": 2092.88,
+            "load_ms": 0.94,
+            "prompt_eval_ms": 244.97,
+            "eval_ms": 1842.82,
+            "prompt_eval_count": 463,
+            "eval_count": 21,
+            "prompt_eval_tokens_per_second": 1890.03,
+            "eval_tokens_per_second": 11.4,
+            "transport_ms": 10.82
+          },
+          "raw": "{\n  \"route\": \"help\",\n  \"response\": \"What's getting you stuck?\" }",
+          "wall_ms": 2103.74
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "conversation",
+        "message": "What's getting you stuck?",
+        "interaction": {
+          "key": "support_scope",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "mock-layout",
+              "label": "mock-layout"
+            },
+            {
+              "id": "mock-translation",
+              "label": "mock-translation"
+            },
+            {
+              "id": "wordpress",
+              "label": "General WordPress"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "Could use a hand getting started.",
+          "last_scope": null,
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2106.34,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2103.7,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 298,
+              "response_chars": 64,
+              "total_ms": 2092.88,
+              "load_ms": 0.94,
+              "prompt_eval_ms": 244.97,
+              "eval_ms": 1842.82,
+              "prompt_eval_count": 463,
+              "eval_count": 21,
+              "prompt_eval_tokens_per_second": 1890.03,
+              "eval_tokens_per_second": 11.4,
+              "transport_ms": 10.82,
+              "result": "Parsed JSON",
+              "ms": 2104.69
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: help",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "help",
+              "ms": 2106.2
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-07",
+      "category": "help",
+      "message": "hlpp plz i dunno wat to do",
+      "e2e_ms": 2459.33,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 291,
+          "metrics": {
+            "http_ms": 2455.01,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 291,
+            "response_chars": 84,
+            "total_ms": 2443.41,
+            "load_ms": 0.92,
+            "prompt_eval_ms": 223.39,
+            "eval_ms": 2213.5,
+            "prompt_eval_count": 466,
+            "eval_count": 25,
+            "prompt_eval_tokens_per_second": 2086.04,
+            "eval_tokens_per_second": 11.29,
+            "transport_ms": 11.6
+          },
+          "raw": "{\n  \"route\": \"help\",\n  \"response\": \"What seems to be the problem with your setup?\" }",
+          "wall_ms": 2455.05
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "conversation",
+        "message": "What seems to be the problem with your setup?",
+        "interaction": {
+          "key": "support_scope",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "mock-layout",
+              "label": "mock-layout"
+            },
+            {
+              "id": "mock-translation",
+              "label": "mock-translation"
+            },
+            {
+              "id": "wordpress",
+              "label": "General WordPress"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "hlpp plz i dunno wat to do",
+          "last_scope": null,
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2457.86,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2455.01,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 291,
+              "response_chars": 84,
+              "total_ms": 2443.41,
+              "load_ms": 0.92,
+              "prompt_eval_ms": 223.39,
+              "eval_ms": 2213.5,
+              "prompt_eval_count": 466,
+              "eval_count": 25,
+              "prompt_eval_tokens_per_second": 2086.04,
+              "eval_tokens_per_second": 11.29,
+              "transport_ms": 11.6,
+              "result": "Parsed JSON",
+              "ms": 2456.06
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: help",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "help",
+              "ms": 2457.71
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-08",
+      "category": "help",
+      "message": "I am stuck and cannot work out which part needs attention.",
+      "e2e_ms": 1754.37,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 323,
+          "metrics": {
+            "http_ms": 1750.06,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 323,
+            "response_chars": 71,
+            "total_ms": 1735.77,
+            "load_ms": 0.94,
+            "prompt_eval_ms": 260.18,
+            "eval_ms": 1469.64,
+            "prompt_eval_count": 468,
+            "eval_count": 17,
+            "prompt_eval_tokens_per_second": 1798.75,
+            "eval_tokens_per_second": 11.57,
+            "transport_ms": 14.29
+          },
+          "raw": "{\"route\":\"help\",\"response\":\"What seems tricky about your mock layout?\"}",
+          "wall_ms": 1750.09
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "conversation",
+        "message": "What seems tricky about your mock layout?",
+        "interaction": {
+          "key": "support_scope",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "mock-layout",
+              "label": "mock-layout"
+            },
+            {
+              "id": "mock-translation",
+              "label": "mock-translation"
+            },
+            {
+              "id": "wordpress",
+              "label": "General WordPress"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "I am stuck and cannot work out which part needs attention.",
+          "last_scope": null,
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 1752.96,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1750.06,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 323,
+              "response_chars": 71,
+              "total_ms": 1735.77,
+              "load_ms": 0.94,
+              "prompt_eval_ms": 260.18,
+              "eval_ms": 1469.64,
+              "prompt_eval_count": 468,
+              "eval_count": 17,
+              "prompt_eval_tokens_per_second": 1798.75,
+              "eval_tokens_per_second": 11.57,
+              "transport_ms": 14.29,
+              "result": "Parsed JSON",
+              "ms": 1751.0
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: help",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "help",
+              "ms": 1752.79
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-09",
+      "category": "help",
+      "message": "Would you help me find a starting point?",
+      "e2e_ms": 1831.49,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 305,
+          "metrics": {
+            "http_ms": 1827.19,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 305,
+            "response_chars": 68,
+            "total_ms": 1820.52,
+            "load_ms": 0.96,
+            "prompt_eval_ms": 276.17,
+            "eval_ms": 1538.59,
+            "prompt_eval_count": 465,
+            "eval_count": 18,
+            "prompt_eval_tokens_per_second": 1683.75,
+            "eval_tokens_per_second": 11.7,
+            "transport_ms": 6.67
+          },
+          "raw": "{\"route\":\"help\",\"response\":\"What kind of help are you looking for?\"}",
+          "wall_ms": 1827.23
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "conversation",
+        "message": "What kind of help are you looking for?",
+        "interaction": {
+          "key": "support_scope",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "mock-layout",
+              "label": "mock-layout"
+            },
+            {
+              "id": "mock-translation",
+              "label": "mock-translation"
+            },
+            {
+              "id": "wordpress",
+              "label": "General WordPress"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "Would you help me find a starting point?",
+          "last_scope": null,
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 1829.89,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1827.19,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 305,
+              "response_chars": 68,
+              "total_ms": 1820.52,
+              "load_ms": 0.96,
+              "prompt_eval_ms": 276.17,
+              "eval_ms": 1538.59,
+              "prompt_eval_count": 465,
+              "eval_count": 18,
+              "prompt_eval_tokens_per_second": 1683.75,
+              "eval_tokens_per_second": 11.7,
+              "transport_ms": 6.67,
+              "result": "Parsed JSON",
+              "ms": 1828.1
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: help",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "help",
+              "ms": 1829.74
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-10",
+      "category": "product",
+      "message": "Please explain editing blocks with mock-layout.",
+      "e2e_ms": 1364.57,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 312,
+          "metrics": {
+            "http_ms": 1360.56,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 312,
+            "response_chars": 47,
+            "total_ms": 1353.46,
+            "load_ms": 0.84,
+            "prompt_eval_ms": 244.81,
+            "eval_ms": 1104.03,
+            "prompt_eval_count": 464,
+            "eval_count": 13,
+            "prompt_eval_tokens_per_second": 1895.35,
+            "eval_tokens_per_second": 11.78,
+            "transport_ms": 7.1
+          },
+          "raw": "{\"route\":\"product:mock-layout\",\"response\":null}",
+          "wall_ms": 1360.6
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "product",
+        "message": "Open the layout editor to edit blocks.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "a",
+            "source": "mock://layout",
+            "product_id": "mock-layout"
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "Please explain editing blocks with mock-layout.",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1363.1,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1360.56,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 312,
+              "response_chars": 47,
+              "total_ms": 1353.46,
+              "load_ms": 0.84,
+              "prompt_eval_ms": 244.81,
+              "eval_ms": 1104.03,
+              "prompt_eval_count": 464,
+              "eval_count": 13,
+              "prompt_eval_tokens_per_second": 1895.35,
+              "eval_tokens_per_second": 11.78,
+              "transport_ms": 7.1,
+              "result": "Parsed JSON",
+              "ms": 1361.34
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-layout"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 1362.75
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-11",
+      "category": "product",
+      "message": "I am trying to edit blocks in mock-layout but the editor is confusing.",
+      "e2e_ms": 1928.01,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 335,
+          "metrics": {
+            "http_ms": 1923.69,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 335,
+            "response_chars": 56,
+            "total_ms": 1912.51,
+            "load_ms": 1.25,
+            "prompt_eval_ms": 268.67,
+            "eval_ms": 1637.29,
+            "prompt_eval_count": 471,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 1753.08,
+            "eval_tokens_per_second": 11.6,
+            "transport_ms": 11.18
+          },
+          "raw": "{\n  \"route\": \"product:mock-layout\",\n  \"response\": null\n}",
+          "wall_ms": 1923.74
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "product",
+        "message": "Open the layout editor to edit blocks.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "a",
+            "source": "mock://layout",
+            "product_id": "mock-layout"
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "I am trying to edit blocks in mock-layout but the editor is confusing.",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1926.7,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1923.69,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 335,
+              "response_chars": 56,
+              "total_ms": 1912.51,
+              "load_ms": 1.25,
+              "prompt_eval_ms": 268.67,
+              "eval_ms": 1637.29,
+              "prompt_eval_count": 471,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 1753.08,
+              "eval_tokens_per_second": 11.6,
+              "transport_ms": 11.18,
+              "result": "Parsed JSON",
+              "ms": 1924.8
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-layout"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 1926.51
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-12",
+      "category": "product",
+      "message": "mock-translation administrator access is what I need help with.",
+      "e2e_ms": 2045.4,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 328,
+          "metrics": {
+            "http_ms": 2041.54,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 328,
+            "response_chars": 61,
+            "total_ms": 2029.82,
+            "load_ms": 1.26,
+            "prompt_eval_ms": 252.08,
+            "eval_ms": 1771.41,
+            "prompt_eval_count": 468,
+            "eval_count": 20,
+            "prompt_eval_tokens_per_second": 1856.55,
+            "eval_tokens_per_second": 11.29,
+            "transport_ms": 11.72
+          },
+          "raw": "{\n  \"route\": \"product:mock-translation\",\n  \"response\": null\n}",
+          "wall_ms": 2041.61
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "product",
+        "message": "Check administrator access.",
+        "interaction": {
+          "key": "troubleshooting_start",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "troubleshoot:mock-translation:0",
+              "label": "Troubleshoot: Missing translation panel"
+            }
+          ]
+        },
+        "sources": [
+          {
+            "id": "access",
+            "source": "mock://access",
+            "product_id": "mock-translation"
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "mock-translation administrator access is what I need help with.",
+          "last_scope": "mock-translation",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "access"
+        },
+        "debug": {
+          "duration_ms": 2044.15,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.06
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2041.54,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 328,
+              "response_chars": 61,
+              "total_ms": 2029.82,
+              "load_ms": 1.26,
+              "prompt_eval_ms": 252.08,
+              "eval_ms": 1771.41,
+              "prompt_eval_count": 468,
+              "eval_count": 20,
+              "prompt_eval_tokens_per_second": 1856.55,
+              "eval_tokens_per_second": 11.29,
+              "transport_ms": 11.72,
+              "result": "Parsed JSON",
+              "ms": 2042.41
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-translation"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 2043.91
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 1,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-13",
+      "category": "product",
+      "message": "mock-translaton panle is missng agan",
+      "e2e_ms": 1973.42,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 301,
+          "metrics": {
+            "http_ms": 1968.86,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 301,
+            "response_chars": 61,
+            "total_ms": 1958.09,
+            "load_ms": 0.82,
+            "prompt_eval_ms": 208.56,
+            "eval_ms": 1743.85,
+            "prompt_eval_count": 467,
+            "eval_count": 20,
+            "prompt_eval_tokens_per_second": 2239.16,
+            "eval_tokens_per_second": 11.47,
+            "transport_ms": 10.77
+          },
+          "raw": "{\n  \"route\": \"product:mock-translation\",\n  \"response\": null\n}",
+          "wall_ms": 1968.9
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "product",
+        "message": "Which documented topic would you like help with?",
+        "interaction": {
+          "key": "support_intent",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "guide:mock-translation:0",
+              "label": "Missing translation panel"
+            },
+            {
+              "id": "guide:mock-translation:1",
+              "label": "Panel access"
+            },
+            {
+              "id": "troubleshoot:mock-translation:0",
+              "label": "Troubleshoot: Missing translation panel"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "mock-translaton panle is missng agan",
+          "last_scope": "mock-translation",
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 1971.7,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1968.86,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 301,
+              "response_chars": 61,
+              "total_ms": 1958.09,
+              "load_ms": 0.82,
+              "prompt_eval_ms": 208.56,
+              "eval_ms": 1743.85,
+              "prompt_eval_count": 467,
+              "eval_count": 20,
+              "prompt_eval_tokens_per_second": 2239.16,
+              "eval_tokens_per_second": 11.47,
+              "transport_ms": 10.77,
+              "result": "Parsed JSON",
+              "ms": 1969.85
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-translation"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 1971.49
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-14",
+      "category": "wordpress",
+      "message": "Where is the WordPress password reset flow?",
+      "e2e_ms": 1110.06,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 308,
+          "metrics": {
+            "http_ms": 1105.92,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 308,
+            "response_chars": 37,
+            "total_ms": 1095.41,
+            "load_ms": 1.9,
+            "prompt_eval_ms": 263.97,
+            "eval_ms": 824.18,
+            "prompt_eval_count": 464,
+            "eval_count": 10,
+            "prompt_eval_tokens_per_second": 1757.78,
+            "eval_tokens_per_second": 12.13,
+            "transport_ms": 10.51
+          },
+          "raw": "{\"route\":\"wordpress\",\"response\":null}",
+          "wall_ms": 1105.96
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "wordpress",
+        "message": "Check the site's normal login address and use the site's password reset flow if available. Never share a password, reset token, or one-time code in chat.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "wp-login-basic",
+            "source": "purrfect://everyday-wordpress/login",
+            "product_id": null
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "Where is the WordPress password reset flow?",
+          "last_scope": "wordpress",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "wp-login-basic"
+        },
+        "debug": {
+          "duration_ms": 1108.79,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.08
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1105.92,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 308,
+              "response_chars": 37,
+              "total_ms": 1095.41,
+              "load_ms": 1.9,
+              "prompt_eval_ms": 263.97,
+              "eval_ms": 824.18,
+              "prompt_eval_count": 464,
+              "eval_count": 10,
+              "prompt_eval_tokens_per_second": 1757.78,
+              "eval_tokens_per_second": 12.13,
+              "transport_ms": 10.51,
+              "result": "Parsed JSON",
+              "ms": 1106.88
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: wordpress",
+              "target": "wordpress"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "wordpress",
+              "ms": 1108.58
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-15",
+      "category": "wordpress",
+      "message": "cant log in to wrdpress, forgott passwrd",
+      "e2e_ms": 1680.29,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 305,
+          "metrics": {
+            "http_ms": 1676.3,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 305,
+            "response_chars": 46,
+            "total_ms": 1664.67,
+            "load_ms": 1.07,
+            "prompt_eval_ms": 288.83,
+            "eval_ms": 1369.2,
+            "prompt_eval_count": 469,
+            "eval_count": 16,
+            "prompt_eval_tokens_per_second": 1623.79,
+            "eval_tokens_per_second": 11.69,
+            "transport_ms": 11.63
+          },
+          "raw": "{\n  \"route\": \"wordpress\",\n  \"response\": null\n}",
+          "wall_ms": 1676.34
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "wordpress",
+        "message": "Which documented topic would you like help with?",
+        "interaction": {
+          "key": "support_intent",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "guide:wordpress:0",
+              "label": "WordPress editor basics"
+            },
+            {
+              "id": "guide:wordpress:1",
+              "label": "WordPress display cache"
+            },
+            {
+              "id": "guide:wordpress:2",
+              "label": "WordPress sign-in basics"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "cant log in to wrdpress, forgott passwrd",
+          "last_scope": "wordpress",
+          "pending": true,
+          "revision": 1,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 1678.93,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.06
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1676.3,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 305,
+              "response_chars": 46,
+              "total_ms": 1664.67,
+              "load_ms": 1.07,
+              "prompt_eval_ms": 288.83,
+              "eval_ms": 1369.2,
+              "prompt_eval_count": 469,
+              "eval_count": 16,
+              "prompt_eval_tokens_per_second": 1623.79,
+              "eval_tokens_per_second": 11.69,
+              "transport_ms": 11.63,
+              "result": "Parsed JSON",
+              "ms": 1677.14
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: wordpress",
+              "target": "wordpress"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "wordpress",
+              "ms": 1678.75
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-16",
+      "category": "wordpress",
+      "message": "I need general WordPress help with page permissions.",
+      "e2e_ms": 1095.33,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 317,
+          "metrics": {
+            "http_ms": 1091.44,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 317,
+            "response_chars": 37,
+            "total_ms": 1083.98,
+            "load_ms": 0.8,
+            "prompt_eval_ms": 261.42,
+            "eval_ms": 816.84,
+            "prompt_eval_count": 465,
+            "eval_count": 10,
+            "prompt_eval_tokens_per_second": 1778.75,
+            "eval_tokens_per_second": 12.24,
+            "transport_ms": 7.46
+          },
+          "raw": "{\"route\":\"wordpress\",\"response\":null}",
+          "wall_ms": 1091.47
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "wordpress",
+        "message": "If the Edit option is missing, check whether you are signed in and have permission to edit that page. Ask a site administrator if uncertain; do not change roles or permissions yourself.\n\nIf an edit was saved but the public page looks unchanged, check the page in a private browser window. Ask the site administrator before clearing shared caches.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "wp-editor-basic",
+            "source": "purrfect://everyday-wordpress/editor",
+            "product_id": null
+          },
+          {
+            "id": "wp-cache-basic",
+            "source": "purrfect://everyday-wordpress/cache",
+            "product_id": null
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "I need general WordPress help with page permissions.",
+          "last_scope": "wordpress",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "wp-editor-basic"
+        },
+        "debug": {
+          "duration_ms": 1094.28,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.05
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1091.44,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 317,
+              "response_chars": 37,
+              "total_ms": 1083.98,
+              "load_ms": 0.8,
+              "prompt_eval_ms": 261.42,
+              "eval_ms": 816.84,
+              "prompt_eval_count": 465,
+              "eval_count": 10,
+              "prompt_eval_tokens_per_second": 1778.75,
+              "eval_tokens_per_second": 12.24,
+              "transport_ms": 7.46,
+              "result": "Parsed JSON",
+              "ms": 1092.59
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: wordpress",
+              "target": "wordpress"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "wordpress",
+              "ms": 1094.13
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 2
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-17",
+      "category": "context",
+      "message": "Could you make that instruction easier to understand?",
+      "e2e_ms": 2023.49,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 354,
+          "metrics": {
+            "http_ms": 2019.75,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 354,
+            "response_chars": 45,
+            "total_ms": 2008.68,
+            "load_ms": 0.95,
+            "prompt_eval_ms": 545.41,
+            "eval_ms": 1457.36,
+            "prompt_eval_count": 474,
+            "eval_count": 17,
+            "prompt_eval_tokens_per_second": 869.07,
+            "eval_tokens_per_second": 11.66,
+            "transport_ms": 11.07
+          },
+          "raw": "{\n  \"route\": \"followup\",\n  \"response\": null\n}",
+          "wall_ms": 2019.78
+        }
+      ],
+      "answer": {
+        "status": "clarification",
+        "scope": "conversation",
+        "message": "The registered guide doesn't specify a previous step. Which part would you like me to explain?",
+        "interaction": null,
+        "sources": [],
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 3,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 2022.21,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2019.75,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 354,
+              "response_chars": 45,
+              "total_ms": 2008.68,
+              "load_ms": 0.95,
+              "prompt_eval_ms": 545.41,
+              "eval_ms": 1457.36,
+              "prompt_eval_count": 474,
+              "eval_count": 17,
+              "prompt_eval_tokens_per_second": 869.07,
+              "eval_tokens_per_second": 11.66,
+              "transport_ms": 11.07,
+              "result": "Parsed JSON",
+              "ms": 2020.6
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: followup",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "followup",
+              "ms": 2022.08
+            },
+            {
+              "stage": "Final route",
+              "result": "conversation",
+              "status": "clarification",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-18",
+      "category": "context",
+      "message": "Which part came before that?",
+      "e2e_ms": 1142.64,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 329,
+          "metrics": {
+            "http_ms": 1138.39,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 329,
+            "response_chars": 36,
+            "total_ms": 1125.98,
+            "load_ms": 0.82,
+            "prompt_eval_ms": 204.56,
+            "eval_ms": 916.42,
+            "prompt_eval_count": 471,
+            "eval_count": 11,
+            "prompt_eval_tokens_per_second": 2302.5,
+            "eval_tokens_per_second": 12.0,
+            "transport_ms": 12.41
+          },
+          "raw": "{\"route\":\"followup\",\"response\":null}",
+          "wall_ms": 1138.45
+        }
+      ],
+      "answer": {
+        "status": "clarification",
+        "scope": "conversation",
+        "message": "The registered guide doesn't specify a previous step. Which part would you like me to explain?",
+        "interaction": null,
+        "sources": [],
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 3,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1140.96,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.05
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1138.39,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 329,
+              "response_chars": 36,
+              "total_ms": 1125.98,
+              "load_ms": 0.82,
+              "prompt_eval_ms": 204.56,
+              "eval_ms": 916.42,
+              "prompt_eval_count": 471,
+              "eval_count": 11,
+              "prompt_eval_tokens_per_second": 2302.5,
+              "eval_tokens_per_second": 12.0,
+              "transport_ms": 12.41,
+              "result": "Parsed JSON",
+              "ms": 1139.32
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: followup",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "followup",
+              "ms": 1140.86
+            },
+            {
+              "stage": "Final route",
+              "result": "conversation",
+              "status": "clarification",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-19",
+      "category": "context",
+      "message": "Please explain the guidance you just gave me.",
+      "e2e_ms": 1203.35,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 346,
+          "metrics": {
+            "http_ms": 1199.57,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 346,
+            "response_chars": 36,
+            "total_ms": 1188.09,
+            "load_ms": 1.36,
+            "prompt_eval_ms": 263.92,
+            "eval_ms": 917.62,
+            "prompt_eval_count": 474,
+            "eval_count": 11,
+            "prompt_eval_tokens_per_second": 1796.0,
+            "eval_tokens_per_second": 11.99,
+            "transport_ms": 11.48
+          },
+          "raw": "{\"route\":\"followup\",\"response\":null}",
+          "wall_ms": 1199.6
+        }
+      ],
+      "answer": {
+        "status": "clarification",
+        "scope": "conversation",
+        "message": "The registered guide doesn't specify a previous step. Which part would you like me to explain?",
+        "interaction": null,
+        "sources": [],
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 3,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1202.02,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1199.57,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 346,
+              "response_chars": 36,
+              "total_ms": 1188.09,
+              "load_ms": 1.36,
+              "prompt_eval_ms": 263.92,
+              "eval_ms": 917.62,
+              "prompt_eval_count": 474,
+              "eval_count": 11,
+              "prompt_eval_tokens_per_second": 1796.0,
+              "eval_tokens_per_second": 11.99,
+              "transport_ms": 11.48,
+              "result": "Parsed JSON",
+              "ms": 1200.33
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: followup",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "followup",
+              "ms": 1201.89
+            },
+            {
+              "stage": "Final route",
+              "result": "conversation",
+              "status": "clarification",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-20",
+      "category": "negation",
+      "message": "I tried that instruction and it has not helped.",
+      "e2e_ms": 2320.15,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 348,
+          "metrics": {
+            "http_ms": 2316.41,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 348,
+            "response_chars": 100,
+            "total_ms": 2303.97,
+            "load_ms": 1.49,
+            "prompt_eval_ms": 211.45,
+            "eval_ms": 2085.4,
+            "prompt_eval_count": 475,
+            "eval_count": 24,
+            "prompt_eval_tokens_per_second": 2246.39,
+            "eval_tokens_per_second": 11.51,
+            "transport_ms": 12.44
+          },
+          "raw": "{\"route\":\"unresolved\",\"response\":\"Sorry to hear that, what's the issue with editing layout blocks?\"}",
+          "wall_ms": 2316.45
+        }
+      ],
+      "answer": {
+        "status": "clarification",
+        "scope": "conversation",
+        "message": "Sorry to hear that, what's the issue with editing layout blocks?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 3,
+          "outcome": "unresolved",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 2319.04,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.06
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2316.41,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 348,
+              "response_chars": 100,
+              "total_ms": 2303.97,
+              "load_ms": 1.49,
+              "prompt_eval_ms": 211.45,
+              "eval_ms": 2085.4,
+              "prompt_eval_count": 475,
+              "eval_count": 24,
+              "prompt_eval_tokens_per_second": 2246.39,
+              "eval_tokens_per_second": 11.51,
+              "transport_ms": 12.44,
+              "result": "Parsed JSON",
+              "ms": 2317.53
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: unresolved",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "unresolved",
+              "ms": 2318.94
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "clarification",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-21",
+      "category": "negation",
+      "message": "It is definitely not fixed.",
+      "e2e_ms": 1871.29,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 328,
+          "metrics": {
+            "http_ms": 1867.17,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 328,
+            "response_chars": 56,
+            "total_ms": 1859.8,
+            "load_ms": 0.99,
+            "prompt_eval_ms": 217.79,
+            "eval_ms": 1636.06,
+            "prompt_eval_count": 471,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 2162.63,
+            "eval_tokens_per_second": 11.61,
+            "transport_ms": 7.37
+          },
+          "raw": "{\n  \"route\": \"product:mock-layout\",\n  \"response\": null\n}",
+          "wall_ms": 1867.21
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "product",
+        "message": "Open the layout editor to edit blocks.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "a",
+            "source": "mock://layout",
+            "product_id": "mock-layout"
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 4,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1869.64,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1867.17,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 328,
+              "response_chars": 56,
+              "total_ms": 1859.8,
+              "load_ms": 0.99,
+              "prompt_eval_ms": 217.79,
+              "eval_ms": 1636.06,
+              "prompt_eval_count": 471,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 2162.63,
+              "eval_tokens_per_second": 11.61,
+              "transport_ms": 7.37,
+              "result": "Parsed JSON",
+              "ms": 1867.96
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-layout"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 1869.47
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-22",
+      "category": "negation",
+      "message": "No luck, same problem after that step.",
+      "e2e_ms": 1901.58,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 339,
+          "metrics": {
+            "http_ms": 1897.83,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 339,
+            "response_chars": 76,
+            "total_ms": 1890.38,
+            "load_ms": 1.04,
+            "prompt_eval_ms": 244.88,
+            "eval_ms": 1639.84,
+            "prompt_eval_count": 474,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 1935.64,
+            "eval_tokens_per_second": 11.59,
+            "transport_ms": 7.45
+          },
+          "raw": "{\"route\":\"unresolved\",\"response\":\"What's the same problem after that step?\"}",
+          "wall_ms": 1897.86
+        }
+      ],
+      "answer": {
+        "status": "clarification",
+        "scope": "conversation",
+        "message": "What's the same problem after that step?",
+        "interaction": null,
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "How do I edit layout blocks?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 3,
+          "outcome": "unresolved",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 1900.33,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.06
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1897.83,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 339,
+              "response_chars": 76,
+              "total_ms": 1890.38,
+              "load_ms": 1.04,
+              "prompt_eval_ms": 244.88,
+              "eval_ms": 1639.84,
+              "prompt_eval_count": 474,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 1935.64,
+              "eval_tokens_per_second": 11.59,
+              "transport_ms": 7.45,
+              "result": "Parsed JSON",
+              "ms": 1898.77
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: unresolved",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "unresolved",
+              "ms": 1900.22
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "clarification",
+              "buttons": 0,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-23",
+      "category": "context",
+      "message": "Actually, switch to mock-translation instead.",
+      "e2e_ms": 2019.71,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 346,
+          "metrics": {
+            "http_ms": 2014.88,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 346,
+            "response_chars": 61,
+            "total_ms": 2002.37,
+            "load_ms": 1.16,
+            "prompt_eval_ms": 269.61,
+            "eval_ms": 1726.69,
+            "prompt_eval_count": 474,
+            "eval_count": 20,
+            "prompt_eval_tokens_per_second": 1758.1,
+            "eval_tokens_per_second": 11.58,
+            "transport_ms": 12.51
+          },
+          "raw": "{\n  \"route\": \"product:mock-translation\",\n  \"response\": null\n}",
+          "wall_ms": 2014.92
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "product",
+        "message": "Which documented topic would you like help with?",
+        "interaction": {
+          "key": "support_intent",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "guide:mock-translation:0",
+              "label": "Missing translation panel"
+            },
+            {
+              "id": "guide:mock-translation:1",
+              "label": "Panel access"
+            },
+            {
+              "id": "troubleshoot:mock-translation:0",
+              "label": "Troubleshoot: Missing translation panel"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "Actually, switch to mock-translation instead.",
+          "last_scope": "mock-translation",
+          "pending": true,
+          "revision": 3,
+          "outcome": "open",
+          "evidence_id": null
+        },
+        "debug": {
+          "duration_ms": 2017.39,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.06
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 2014.88,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 346,
+              "response_chars": 61,
+              "total_ms": 2002.37,
+              "load_ms": 1.16,
+              "prompt_eval_ms": 269.61,
+              "eval_ms": 1726.69,
+              "prompt_eval_count": 474,
+              "eval_count": 20,
+              "prompt_eval_tokens_per_second": 1758.1,
+              "eval_tokens_per_second": 11.58,
+              "transport_ms": 12.51,
+              "result": "Parsed JSON",
+              "ms": 2015.74
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-translation"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 2017.22
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-24",
+      "category": "workflow",
+      "message": "That check has not solved the problem.",
+      "e2e_ms": 3121.69,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 331,
+          "metrics": {
+            "http_ms": 3117.34,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 331,
+            "response_chars": 106,
+            "total_ms": 3092.5,
+            "load_ms": 0.98,
+            "prompt_eval_ms": 530.67,
+            "eval_ms": 2556.29,
+            "prompt_eval_count": 471,
+            "eval_count": 29,
+            "prompt_eval_tokens_per_second": 887.56,
+            "eval_tokens_per_second": 11.34,
+            "transport_ms": 24.84
+          },
+          "raw": "{\n  \"route\": \"unresolved\",\n  \"response\": \"What seems to be the issue with the mock-translation product?\"\n}",
+          "wall_ms": 3117.38
+        }
+      ],
+      "answer": {
+        "status": "awaiting_result",
+        "scope": "product",
+        "message": "Check administrator access. Did this solve the problem?",
+        "interaction": {
+          "key": "troubleshooting_result",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "check:admin:worked",
+              "label": "It worked"
+            },
+            {
+              "id": "check:admin:failed",
+              "label": "Didn't work"
+            },
+            {
+              "id": "check:admin:why",
+              "label": "Why this step?"
+            }
+          ]
+        },
+        "sources": [
+          {
+            "id": "admin",
+            "source": "mock://access",
+            "product_id": "mock-translation"
+          }
+        ],
+        "context": {
+          "last_question": "I need some help",
+          "last_scope": "mock-translation",
+          "pending": true,
+          "revision": 6,
+          "outcome": "open",
+          "evidence_id": "admin",
+          "troubleshooting": {
+            "product_id": "mock-translation",
+            "product_version": "1",
+            "procedure_id": "missing-panel",
+            "step_id": "admin",
+            "attempts": [
+              {
+                "step_id": "plugin",
+                "result": "failed",
+                "evidence_id": "panel"
+              }
+            ],
+            "status": "awaiting_result"
+          }
+        },
+        "debug": {
+          "duration_ms": 3120.52,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 3117.34,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 331,
+              "response_chars": 106,
+              "total_ms": 3092.5,
+              "load_ms": 0.98,
+              "prompt_eval_ms": 530.67,
+              "eval_ms": 2556.29,
+              "prompt_eval_count": 471,
+              "eval_count": 29,
+              "prompt_eval_tokens_per_second": 887.56,
+              "eval_tokens_per_second": 11.34,
+              "transport_ms": 24.84,
+              "result": "Parsed JSON",
+              "ms": 3118.45
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: unresolved",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "unresolved",
+              "ms": 3120.28
+            },
+            {
+              "stage": "Final route",
+              "result": "product",
+              "status": "awaiting_result",
+              "buttons": 3,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    },
+    {
+      "id": "holdout-25",
+      "category": "workflow",
+      "message": "Why are we doing this check?",
+      "e2e_ms": 1891.73,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 321,
+          "metrics": {
+            "http_ms": 1887.34,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 321,
+            "response_chars": 72,
+            "total_ms": 1878.87,
+            "load_ms": 1.05,
+            "prompt_eval_ms": 234.06,
+            "eval_ms": 1639.06,
+            "prompt_eval_count": 470,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 2008.03,
+            "eval_tokens_per_second": 11.59,
+            "transport_ms": 8.47
+          },
+          "raw": "{\"route\":\"help\",\"response\":\"What seems to be the issue with the check?\"}",
+          "wall_ms": 1887.38
+        }
+      ],
+      "answer": {
+        "status": "needs_input",
+        "scope": "conversation",
+        "message": "What seems to be the issue with the check?",
+        "interaction": {
+          "key": "support_scope",
+          "kind": "single_select",
+          "options": [
+            {
+              "id": "mock-layout",
+              "label": "mock-layout"
+            },
+            {
+              "id": "mock-translation",
+              "label": "mock-translation"
+            },
+            {
+              "id": "wordpress",
+              "label": "General WordPress"
+            }
+          ]
+        },
+        "sources": [],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "I need some help",
+          "last_scope": "mock-translation",
+          "pending": true,
+          "revision": 5,
+          "outcome": "open",
+          "evidence_id": "plugin",
+          "troubleshooting": {
+            "product_id": "mock-translation",
+            "product_version": "1",
+            "procedure_id": "missing-panel",
+            "step_id": "plugin",
+            "attempts": [],
+            "status": "awaiting_result"
+          }
+        },
+        "debug": {
+          "duration_ms": 1890.28,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 1887.34,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 321,
+              "response_chars": 72,
+              "total_ms": 1878.87,
+              "load_ms": 1.05,
+              "prompt_eval_ms": 234.06,
+              "eval_ms": 1639.06,
+              "prompt_eval_count": 470,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 2008.03,
+              "eval_tokens_per_second": 11.59,
+              "transport_ms": 8.47,
+              "result": "Parsed JSON",
+              "ms": 1888.33
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: help",
+              "target": "none"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "help",
+              "ms": 1890.08
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "needs_input",
+              "buttons": 3,
+              "sources": 0
+            }
+          ]
+        }
+      },
+      "failures": [
+        "status: expected one of ['awaiting_result'], got 'needs_input'"
+      ]
+    },
+    {
+      "id": "holdout-26",
+      "category": "product",
+      "message": "I am editing a page using mock-layout. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. How do I edit those blocks in mock-layout?",
+      "e2e_ms": 3320.22,
+      "model_calls": 1,
+      "calls": [
+        {
+          "system_chars": 1925,
+          "user_chars": 976,
+          "metrics": {
+            "http_ms": 3315.96,
+            "done_reason": "stop",
+            "system_chars": 1925,
+            "user_chars": 976,
+            "response_chars": 56,
+            "total_ms": 3306.07,
+            "load_ms": 1.03,
+            "prompt_eval_ms": 1638.74,
+            "eval_ms": 1660.37,
+            "prompt_eval_count": 595,
+            "eval_count": 19,
+            "prompt_eval_tokens_per_second": 363.08,
+            "eval_tokens_per_second": 11.44,
+            "transport_ms": 9.89
+          },
+          "raw": "{\n  \"route\": \"product:mock-layout\",\n  \"response\": null\n}",
+          "wall_ms": 3316.0
+        }
+      ],
+      "answer": {
+        "status": "grounded",
+        "scope": "product",
+        "message": "Open the layout editor to edit blocks.",
+        "interaction": null,
+        "sources": [
+          {
+            "id": "a",
+            "source": "mock://layout",
+            "product_id": "mock-layout"
+          }
+        ],
+        "routing": "unified-intent",
+        "context": {
+          "last_question": "I am editing a page using mock-layout. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. How do I edit those blocks in mock-layout?",
+          "last_scope": "mock-layout",
+          "pending": false,
+          "revision": 2,
+          "outcome": "open",
+          "evidence_id": "a"
+        },
+        "debug": {
+          "duration_ms": 3318.81,
+          "model_calls": 1,
+          "stages": [
+            {
+              "stage": "Discovery and knowledge",
+              "ms": 0.07
+            },
+            {
+              "stage": "Session lock",
+              "ms": 0.0
+            },
+            {
+              "stage": "Ollama",
+              "model_calls": 1,
+              "http_ms": 3315.96,
+              "done_reason": "stop",
+              "system_chars": 1925,
+              "user_chars": 976,
+              "response_chars": 56,
+              "total_ms": 3306.07,
+              "load_ms": 1.03,
+              "prompt_eval_ms": 1638.74,
+              "eval_ms": 1660.37,
+              "prompt_eval_count": 595,
+              "eval_count": 19,
+              "prompt_eval_tokens_per_second": 363.08,
+              "eval_tokens_per_second": 11.44,
+              "transport_ms": 9.89,
+              "result": "Parsed JSON",
+              "ms": 3316.87
+            },
+            {
+              "stage": "Validation",
+              "result": "Intent: product",
+              "target": "mock-layout"
+            },
+            {
+              "stage": "Unified decision",
+              "result": "product",
+              "ms": 3318.52
+            },
+            {
+              "stage": "Final route",
+              "result": "unified-intent",
+              "status": "grounded",
+              "buttons": 0,
+              "sources": 1
+            }
+          ]
+        }
+      },
+      "failures": []
+    }
+  ]
+}

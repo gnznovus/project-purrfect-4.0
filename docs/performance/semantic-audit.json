@@ -1,0 +1,36 @@
+[
+  {
+    "report": "compact-confirmation-before-scope-guard.json",
+    "id": "social-1",
+    "message": "Hii Purrr!!",
+    "answer": "You're welcome! How can I make your day better?",
+    "issue": "A greeting receives a thanks reply.",
+    "structural_failures": []
+  },
+  {
+    "report": "compact-confirmation-before-scope-guard.json",
+    "id": "help-0",
+    "message": "i ned sme hlp pls",
+    "answer": "You need some help, okay?",
+    "issue": "Weak or unhelpful tone despite help route.",
+    "structural_failures": []
+  },
+  {
+    "report": "compact-confirmation-before-scope-guard.json",
+    "id": "negation-1",
+    "message": "it stil dosnt work",
+    "answer": "Open the layout editor to edit blocks.",
+    "issue": "Failed guidance is replayed instead of acknowledged.",
+    "structural_failures": []
+  },
+  {
+    "report": "holdout-before-scope-guard.json",
+    "id": "holdout-25",
+    "message": "Why are we doing this check?",
+    "answer": "What seems to be the issue with the check?",
+    "issue": "Workflow explanation was misrouted, although workflow state was preserved.",
+    "structural_failures": [
+      "status: expected one of ['awaiting_result'], got 'needs_input'"
+    ]
+  }
+]

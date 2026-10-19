@@ -1,0 +1,17 @@
+{
+  "cpu": "AMD Ryzen 5 230 w/ Radeon 760M Graphics        ",
+  "physical_cores": 6,
+  "logical_processors": 12,
+  "ram_bytes": 14674452480,
+  "gpu": "AMD Radeon 760M Graphics",
+  "gpu_reported_vram_bytes": 2147483648,
+  "gpu_driver": "32.0.22024.13003",
+  "docker": {
+    "NCPU": 12,
+    "MemTotal": 6207217664,
+    "OperatingSystem": "Docker Desktop",
+    "ServerVersion": "29.7.2"
+  },
+  "baseline_ref": "d01b741a45eb9d0ca65f3db4c178880baca0ed3c",
+  "native_ollama_version": "ollama version is 0.40.4"
+}

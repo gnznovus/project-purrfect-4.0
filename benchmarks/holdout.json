@@ -1,0 +1,611 @@
+{
+  "inventory": {
+    "active": [
+      {
+        "kind": "plugin",
+        "key": "mock/mock.php"
+      },
+      {
+        "kind": "plugin",
+        "key": "mock/plugin.php"
+      }
+    ],
+    "signals": [
+      {
+        "kind": "plugin",
+        "key": "mock/mock.php",
+        "product_id": "mock-layout",
+        "version": "1",
+        "contract": 1,
+        "capabilities": [
+          "edit-layout"
+        ],
+        "knowledge": [
+          {
+            "id": "a",
+            "title": "Edit layout blocks",
+            "text": "Open the layout editor to edit blocks.",
+            "source": "mock://layout",
+            "tags": [
+              "layout",
+              "edit"
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "plugin",
+        "key": "mock/plugin.php",
+        "product_id": "mock-translation",
+        "version": "1",
+        "contract": 1,
+        "capabilities": [
+          "translate-content"
+        ],
+        "knowledge": [
+          {
+            "id": "panel",
+            "title": "Missing translation panel",
+            "text": "Check plugin status.",
+            "source": "mock://panel",
+            "tags": [
+              "translation",
+              "panel",
+              "missing"
+            ]
+          },
+          {
+            "id": "access",
+            "title": "Panel access",
+            "text": "Check administrator access.",
+            "source": "mock://access",
+            "tags": [
+              "access"
+            ]
+          }
+        ],
+        "troubleshooting": [
+          {
+            "id": "missing-panel",
+            "title": "Missing translation panel",
+            "steps": [
+              {
+                "id": "plugin",
+                "instruction": "Check plugin status.",
+                "evidence_id": "panel"
+              },
+              {
+                "id": "admin",
+                "instruction": "Check administrator access.",
+                "evidence_id": "access"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "holdout-00",
+      "category": "social",
+      "message": "Heya Purr, nice to meet you.",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-01",
+      "category": "social",
+      "message": "How have you been, Purr?",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-02",
+      "category": "social",
+      "message": "cheers, apreciate it!",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-03",
+      "category": "social",
+      "message": "Good evening there!",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-04",
+      "category": "social",
+      "message": "Thanks for being patient with me.",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-05",
+      "category": "social",
+      "message": "yo pur, hw you doin?",
+      "expect": {
+        "scope": [
+          "conversation"
+        ],
+        "status": [
+          "grounded"
+        ],
+        "interaction": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "holdout-06",
+      "category": "help",
+      "message": "Could use a hand getting started.",
+      "expect": {
+        "scope": [
+          "conversation",
+          "clarify"
+        ],
+        "status": [
+          "needs_input",
+          "clarification"
+        ]
+      }
+    },
+    {
+      "id": "holdout-07",
+      "category": "help",
+      "message": "hlpp plz i dunno wat to do",
+      "expect": {
+        "scope": [
+          "conversation",
+          "clarify"
+        ],
+        "status": [
+          "needs_input",
+          "clarification"
+        ]
+      }
+    },
+    {
+      "id": "holdout-08",
+      "category": "help",
+      "message": "I am stuck and cannot work out which part needs attention.",
+      "expect": {
+        "scope": [
+          "conversation",
+          "clarify"
+        ],
+        "status": [
+          "needs_input",
+          "clarification"
+        ]
+      }
+    },
+    {
+      "id": "holdout-09",
+      "category": "help",
+      "message": "Would you help me find a starting point?",
+      "expect": {
+        "scope": [
+          "conversation",
+          "clarify"
+        ],
+        "status": [
+          "needs_input",
+          "clarification"
+        ]
+      }
+    },
+    {
+      "id": "holdout-10",
+      "category": "product",
+      "message": "Please explain editing blocks with mock-layout.",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-11",
+      "category": "product",
+      "message": "I am trying to edit blocks in mock-layout but the editor is confusing.",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-12",
+      "category": "product",
+      "message": "mock-translation administrator access is what I need help with.",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-translation"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-13",
+      "category": "product",
+      "message": "mock-translaton panle is missng agan",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-translation"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-14",
+      "category": "wordpress",
+      "message": "Where is the WordPress password reset flow?",
+      "expect": {
+        "scope": [
+          "wordpress"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-15",
+      "category": "wordpress",
+      "message": "cant log in to wrdpress, forgott passwrd",
+      "expect": {
+        "scope": [
+          "wordpress"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-16",
+      "category": "wordpress",
+      "message": "I need general WordPress help with page permissions.",
+      "expect": {
+        "scope": [
+          "wordpress"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    },
+    {
+      "id": "holdout-17",
+      "category": "context",
+      "message": "Could you make that instruction easier to understand?",
+      "expect": {
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ],
+        "context.last_question": [
+          "How do I edit layout blocks?"
+        ],
+        "status": [
+          "grounded",
+          "clarification"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-18",
+      "category": "context",
+      "message": "Which part came before that?",
+      "expect": {
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ],
+        "context.last_question": [
+          "How do I edit layout blocks?"
+        ],
+        "status": [
+          "grounded",
+          "clarification"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-19",
+      "category": "context",
+      "message": "Please explain the guidance you just gave me.",
+      "expect": {
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ],
+        "context.last_question": [
+          "How do I edit layout blocks?"
+        ],
+        "status": [
+          "grounded",
+          "clarification"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-20",
+      "category": "negation",
+      "message": "I tried that instruction and it has not helped.",
+      "expect": {
+        "context.outcome": [
+          "open",
+          "unresolved"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-21",
+      "category": "negation",
+      "message": "It is definitely not fixed.",
+      "expect": {
+        "context.outcome": [
+          "open",
+          "unresolved"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-22",
+      "category": "negation",
+      "message": "No luck, same problem after that step.",
+      "expect": {
+        "context.outcome": [
+          "open",
+          "unresolved"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "context.evidence_id": [
+          "a"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-23",
+      "category": "context",
+      "message": "Actually, switch to mock-translation instead.",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-translation"
+        ]
+      },
+      "context": {
+        "last_question": "How do I edit layout blocks?",
+        "last_scope": "mock-layout",
+        "pending": false,
+        "revision": 2,
+        "outcome": "open",
+        "evidence_id": "a"
+      }
+    },
+    {
+      "id": "holdout-24",
+      "category": "workflow",
+      "message": "That check has not solved the problem.",
+      "expect": {
+        "status": [
+          "awaiting_result"
+        ],
+        "context.last_scope": [
+          "mock-translation"
+        ]
+      },
+      "context": {
+        "last_question": "I need some help",
+        "last_scope": "mock-translation",
+        "pending": true,
+        "revision": 4,
+        "outcome": "open",
+        "evidence_id": "plugin",
+        "troubleshooting": {
+          "product_id": "mock-translation",
+          "product_version": "1",
+          "procedure_id": "missing-panel",
+          "step_id": "plugin",
+          "attempts": [],
+          "status": "awaiting_result"
+        }
+      }
+    },
+    {
+      "id": "holdout-25",
+      "category": "workflow",
+      "message": "Why are we doing this check?",
+      "expect": {
+        "status": [
+          "awaiting_result"
+        ],
+        "context.last_scope": [
+          "mock-translation"
+        ]
+      },
+      "context": {
+        "last_question": "I need some help",
+        "last_scope": "mock-translation",
+        "pending": true,
+        "revision": 4,
+        "outcome": "open",
+        "evidence_id": "plugin",
+        "troubleshooting": {
+          "product_id": "mock-translation",
+          "product_version": "1",
+          "procedure_id": "missing-panel",
+          "step_id": "plugin",
+          "attempts": [],
+          "status": "awaiting_result"
+        }
+      }
+    },
+    {
+      "id": "holdout-26",
+      "category": "product",
+      "message": "I am editing a page using mock-layout. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. The page contains several sections, and I am unsure which documented editor I should use for the blocks. How do I edit those blocks in mock-layout?",
+      "expect": {
+        "scope": [
+          "product"
+        ],
+        "context.last_scope": [
+          "mock-layout"
+        ],
+        "status": [
+          "grounded",
+          "needs_input"
+        ]
+      }
+    }
+  ]
+}

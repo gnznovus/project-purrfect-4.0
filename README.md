@@ -100,6 +100,8 @@ Without the bootstrap, the default local Brain mode is deterministic. The Goal 1
 - The WordPress lab uses an external minute clock, with a WP-Cron fallback outside the lab. Component schedules are independent; manual checks use the same heartbeat dispatcher.
 - The mock products are fixtures. A successful no-op native update check does **not** prove installing a real plugin release.
 
+Measured chat latency, implementation details, known language failures and exact verification commands are in the [performance report](docs/performance/REPORT.md). The local HTTP speed target is demonstrated; full conversation and browser acceptance remains unmet.
+
 ## Further work, not yet implemented
 
 - Harden independent Sophia/Purr service authentication and deployment contracts.

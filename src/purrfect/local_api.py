@@ -1,20 +1,18 @@
 """Local-only HTTP POC. Framework-independent knowledge and scope contracts."""
 import json
 import os
-import asyncio
 import re
 from time import perf_counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
 from urllib.parse import urlparse
 
-from purrfect.brain_scope import select_scope
 from purrfect.ollama import OllamaModel
 from purrfect.conversation import Conversation
 from purrfect import troubleshooting as troubleshoot
-from purrfect.conversation_intent import heuristic, classify_move, draft_welcome
+from purrfect.conversation_intent import heuristic
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
@@ -74,7 +72,11 @@ def _choose(question: str, selection: str, knowledge: SiteKnowledge):
         results = knowledge.search(question, general_wp=True)
         scope = "wordpress"
     elif selection in knowledge.products:
-        results = knowledge.search(question, product_ids=(selection,))
+        # Naming a product establishes scope, not evidence for the requested
+        # capability. Avoid matching its ID alone to unrelated documentation.
+        query = re.sub(r"(?<![\w-])" + re.escape(selection) + r"(?![\w-])", "",
+                       question, flags=re.I)
+        results = knowledge.search(query, product_ids=(selection,))
         scope = "product"
     else:
         return _clarify(knowledge)
@@ -139,13 +141,19 @@ def respond(payload: dict, state: LocalState) -> dict:
     knowledge = effective_knowledge(SiteKnowledge(result.products, EVERYDAY_WORDPRESS), payload.get("knowledge_leases", []))
     if not isinstance(context, dict):
         raise ValueError("Invalid browser context")
+    if debug:
+        trace.append({"stage": "Discovery and knowledge", "ms": round((perf_counter() - began) * 1000, 2)})
     restored = Conversation.restore({k: v for k, v in context.items()
                                      if k != "troubleshooting"}, set(knowledge.products))
+    lock_started = perf_counter()
     with state.mutex:
+        if debug:
+            trace.append({"stage": "Session lock", "ms": round((perf_counter() - lock_started) * 1000, 2)})
         previous = state.sessions.get(session_id)
         # A nonempty browser snapshot can restore context after a Python restart.
         # It cannot authorize product access: _choose always checks fresh registry.
-        conversation = restored if previous is None else previous
+        conversation = restored if previous is None else Conversation.restore(
+            previous.export(), set(knowledge.products))
         workflow = state.workflows.get(session_id)
         if workflow is None and context.get("troubleshooting") is not None:
             try:
@@ -158,7 +166,7 @@ def respond(payload: dict, state: LocalState) -> dict:
             except (ValueError, TypeError, KeyError):
                 workflow = None
 
-        def finish(answer, next_state, next_workflow=None):
+        def finish(answer, next_state, next_workflow=workflow):
             # A grounded answer can carry a reference, but only currently active
             # registered evidence is allowed to be replayed later.
             if answer.get("sources"):
@@ -166,6 +174,10 @@ def respond(payload: dict, state: LocalState) -> dict:
                 next_state = next_state.updated(topic=next_state.topic, scope=next_state.scope,
                     pending=next_state.pending, evidence_id=item["id"],
                     outcome=next_state.outcome)
+            # Retain tasks through chat/clarification, but never attach a task
+            # from a different product after a validated scope selection.
+            if next_workflow is not None and next_state.scope != next_workflow.product_id:
+                next_workflow = None
             state.sessions[session_id] = next_state
             if next_workflow is None:
                 state.workflows.pop(session_id, None)
@@ -179,7 +191,8 @@ def respond(payload: dict, state: LocalState) -> dict:
                               "status": answer.get("status", "unknown"),
                               "buttons": len((answer.get("interaction") or {}).get("options", [])),
                               "sources": len(answer.get("sources", []))})
-                answer["debug"] = {"duration_ms": round((perf_counter() - began) * 1000),
+                answer["debug"] = {"duration_ms": round((perf_counter() - began) * 1000, 2),
+                                   "model_calls": sum(step.get("model_calls", 0) for step in trace),
                                    "stages": trace}
             return answer
 
@@ -252,237 +265,151 @@ def respond(payload: dict, state: LocalState) -> dict:
                 result = ("worked" if short in ("worked", "it worked", "yes it worked", "fixed", "it is fixed")
                           else "why" if short in ("why", "why this step") else "failed")
                 return workflow_response(result)
-        # Unified interpretation is the primary path for free-text messages.
-        # Exact selection IDs and active troubleshooting contracts were handled above.
-        # If the model/graph is unavailable, the legacy deterministic path remains.
-        if state.model is not None:
-            try:
-                from purrfect.stateful_langgraph import understand_message
-                registered = {p.id: p.id for p in knowledge.products.values()}
-                registered["wordpress"] = "General WordPress"
-                registered["other"] = "Other"
-                model_started = perf_counter()
-                meaning = understand_message(state.model, message, {
-                    "topic": conversation.topic,
-                    "scope": conversation.scope,
-                    "has_evidence": bool(conversation.evidence_id),
-                    "outcome": conversation.outcome,
-                    "has_active_troubleshooting": workflow is not None,
-                }, registered, trace if debug else None)
-                if debug:
-                    trace.append({"stage": "Unified decision", "result": meaning["intent"] if meaning else "Invalid output; legacy fallback", "ms": round((perf_counter() - model_started) * 1000)})
-            except Exception as error:
-                if debug:
-                    trace.append({"stage": "Unified decision", "result": "Graph error: " + type(error).__name__})
-                meaning = None
-            if meaning is not None:
-                intent = meaning["intent"]
-                if intent == "social":
-                    answer = _reply(GuidanceResponse(meaning["response"], "grounded"), "conversation")
-                    answer["routing"] = "unified-intent"
-                    return finish(answer, conversation.updated(pending=False))
-                if intent in ("help", "clarify"):
-                    choices = tuple(Option(item["id"], item["label"])
-                                    for item in meaning["options"] if item["id"] != "other")
-                    interaction = (Interaction(InputKind.SINGLE_SELECT, "support_scope", choices)
-                                   if choices else None)
-                    answer = _reply(GuidanceResponse(
-                        meaning["response"], "needs_input" if interaction else "clarification",
-                        interaction), "conversation")
-                    answer["routing"] = "unified-intent"
-                    return finish(answer, conversation.updated(
-                        topic=message, scope=None, pending=bool(interaction)))
-                if intent in ("product", "wordpress"):
-                    target = meaning["target"] if intent == "product" else "wordpress"
-                    answer = _choose(message, target, knowledge)
-                    answer["routing"] = "unified-intent"
-                    return finish(answer, conversation.updated(topic=message, scope=target,
-                        pending=answer["status"] == "needs_input"))
-                if intent == "unresolved" and workflow is not None and workflow.status == "awaiting_result":
-                    return workflow_response("failed")
-                if intent == "unresolved":
-                    answer = _reply(GuidanceResponse(meaning["response"], "clarification"), "conversation")
-                    answer["routing"] = "unified-intent"
-                    return finish(answer, conversation.updated(
-                        outcome="unresolved", pending=False))
-                if intent == "followup" and conversation.topic:
-                    # Preserve the existing evidence-bound followup implementation.
-                    pass
-        lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
-        # The model is the first gate for conversational language. Product
-        # evidence and interactive selections continue through fixed contracts.
-        greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
-        pleasantry = lowered in ("can i ask something else", "can i ask another question",
-                                 "thank you", "thanks", "how are you",
-                                 "how are you today", "how is your day",
-                                 "good morning", "good evening")
-        fallback = heuristic(message)
-        correction_text = any(word in lowered for word in
-                              ("i meant", "instead", "switch to", "rather than"))
-        generic_help = (_is_generic_help(message) or bool(re.fullmatch(
-            r"(?:i (?:dont|do not) know (?:where|how) to start|"
-            r"(?:im|i am) (?:lost|confused)|"
-            r"(?:i have no idea|not sure|no idea) (?:where|how) to start|"
-            r"what (?:can|should) i do)", lowered)))
-        # Avoid a second model call for full product questions; the existing
-        # scoped router handles them. Short ambiguous turns belong to dialogue.
-        conversational = (greeting or pleasantry or fallback is not None
-                          or (len(lowered.split()) <= 7 and not correction_text
-                              and not generic_help
-                              and (conversation.topic or len(lowered.split()) <= 3)))
-        move = None
-        # Simple social turns and vague requests go straight to a single
-        # conversational draft. Avoid classifying and then generating twice.
-        direct_dialogue = greeting or pleasantry or generic_help
-        if state.model is not None and conversational and not direct_dialogue:
-            try:
-                move = asyncio.run(classify_move(state.model, message, {
-                    "has_topic": bool(conversation.topic),
-                    "has_guidance": bool(conversation.evidence_id),
-                    "scope": conversation.scope,
-                    "outcome": conversation.outcome,
-                }))
-            except Exception:
-                pass
-        # Invalid model output is not grounds to classify user feedback as
-        # unsupported. The static templates are deliberately a fallback.
-        if (move is None
-                or (move.kind in ("new", "clarify")
-                    and (greeting or pleasantry or fallback is not None))
-                or (fallback is not None and fallback.kind == "resolved"
-                    and move.kind == "unresolved")):
-            # Clear affirmative success overrides a contradictory failure
-            # classification, not otherwise-valid dynamic wording.
-            move = fallback
-        kind = move.kind if move is not None else "new"
-        def conversation_answer(default, status="grounded"):
-            wording = move.reply if move is not None and move.reply else default
-            return _reply(GuidanceResponse(wording, status), "conversation")
+        def retained(**changes):
+            return replace(conversation, revision=conversation.revision + 1, **changes)
 
-        def dynamic_welcome(with_options=False):
-            if state.model is None:
-                return None
-            available = ({p.id: p.id for p in knowledge.products.values()}
-                         | {"wordpress": "General WordPress", "other": "Other"}) if with_options else {}
-            try:
-                draft = asyncio.run(draft_welcome(state.model, message, available))
-            except Exception:
-                return None
-            if draft is None:
-                return None
-            wording, selected = draft
-            interaction = (Interaction(InputKind.SINGLE_SELECT, "support_scope",
-                           tuple(Option(identifier, label) for identifier, label in selected))
-                           if selected else None)
-            return _reply(GuidanceResponse(wording, "needs_input" if interaction else "grounded",
-                                           interaction), "conversation")
-        if greeting or pleasantry:
-            if direct_dialogue:
-                drafted = dynamic_welcome(with_options=False)
-                if drafted is not None:
-                    return finish(drafted, conversation.updated(pending=False))
-            if kind in ("new", "clarify"):
-                kind = "social"
-            if kind == "social":
-                response = ("Hi! I'm here if you need help with WordPress or your registered products."
-                            if greeting else
-                            "Of course! What would you like help with?")
-                drafted = dynamic_welcome(with_options=False)
-                if drafted is not None:
-                    return finish(drafted, conversation.updated(pending=False))
-                return finish(conversation_answer(response), conversation.updated(pending=False))
-        if kind == "social":
-            drafted = dynamic_welcome(with_options=False)
-            if drafted is not None:
-                return finish(drafted, conversation.updated(pending=False))
-            return finish(conversation_answer("Of course! What would you like help with?"),
-                          conversation.updated(pending=False))
-        if kind == "resolved":
-            if not conversation.evidence_id:
-                return finish(conversation_answer(
-                    "Glad to hear it! What were you working on?"), conversation)
-            return finish(conversation_answer(
-                "Glad that worked! Let me know if you need help with anything else."),
-                conversation.updated(topic=conversation.topic, scope=conversation.scope,
-                    outcome="resolved", evidence_id=conversation.evidence_id))
-        if kind == "unresolved":
-            response = ("What didn't work? Tell me what you were trying to do."
-                        if not conversation.evidence_id else
-                        "What happened when you tried it? Did you see an error message?")
-            return finish(conversation_answer(response, "clarification"),
-                conversation.updated(topic=conversation.topic, scope=conversation.scope,
-                    outcome="unresolved", evidence_id=conversation.evidence_id))
-        if conversation.topic and kind in ("simplify", "followup"):
+        def previous_guidance(kind):
             docs = (knowledge.wordpress if conversation.scope == "wordpress" else
                     knowledge.products[conversation.scope].evidence
                     if conversation.scope in knowledge.products else ())
             evidence = next((item for item in docs if item.id == conversation.evidence_id), None)
             if kind == "simplify" and evidence is not None:
-                answer = _reply(GuidanceResponse(
-                    "The documented instruction is: " + evidence.text,
-                    "grounded"), "wordpress" if conversation.scope == "wordpress" else "product",
-                    (evidence,))
-                return finish(answer, conversation.updated(topic=conversation.topic,
-                    scope=conversation.scope, evidence_id=evidence.id,
-                    outcome=conversation.outcome))
+                return finish(_reply(GuidanceResponse(
+                    "The documented instruction is: " + evidence.text, "grounded"),
+                    "wordpress" if conversation.scope == "wordpress" else "product", (evidence,)),
+                    retained())
             response = ("The registered guide doesn't specify a previous step. "
-                        "Which part would you like me to explain?"
-                        if kind == "followup" else
+                        "Which part would you like me to explain?" if kind == "followup" else
                         "Which part of the documented instruction is unclear?")
+            return finish(_reply(GuidanceResponse(response, "clarification"), "conversation"), retained())
+
+        fallback = heuristic(message)
+        meaning = None
+        if state.model is not None:
+            # Free text has exactly one inference attempt. Rejected proposals and
+            # adapter errors must never fall through to another model handler.
+            model_started = perf_counter()
+            try:
+                from purrfect.stateful_langgraph import understand_message
+                registered = {p.id: p.id for p in knowledge.products.values()}
+                registered.update(wordpress="General WordPress", other="Other")
+                meaning = understand_message(state.model, message, {
+                    "topic": conversation.topic, "scope": conversation.scope,
+                    "has_evidence": bool(conversation.evidence_id),
+                    "outcome": conversation.outcome,
+                    "has_active_troubleshooting": workflow is not None,
+                }, registered, trace)
+                if debug:
+                    trace.append({"stage": "Unified decision",
+                        "result": meaning["intent"] if meaning else "Invalid output; safe clarification",
+                        "ms": round((perf_counter() - model_started) * 1000, 2)})
+            except Exception as error:
+                if debug:
+                    trace.append({"stage": "Unified decision", "result": "Graph error: " + type(error).__name__})
+            if meaning is None and fallback is None:
+                answer = _clarify(knowledge)
+                failed = any(step.get("error") for step in trace)
+                answer["routing"] = "brain-unavailable" if failed else "brain-clarify"
+                return finish(answer, retained(topic=conversation.topic or message, pending=True))
+
+        if meaning is not None:
+            kind = meaning["intent"]
+            # Existing deterministic feedback guards retain negation handling.
+            # A model alone cannot confirm successful troubleshooting or resolve
+            # an issue. Explicit workflow choices are checked above.
+            if fallback is not None:
+                kind = fallback.kind
+            elif kind == "resolved":
+                kind = "clarify"
+                meaning = dict(meaning, response="Could you confirm whether the issue is fixed?")
+            if kind == "social":
+                answer = _reply(GuidanceResponse(meaning["response"], "grounded"), "conversation")
+                answer["routing"] = "unified-intent"
+                return finish(answer, retained())
+            if kind in ("help", "clarify"):
+                choices = tuple(Option(item["id"], item["label"])
+                                for item in meaning["options"] if item["id"] != "other")
+                if kind == "help" and not choices:
+                    choices = tuple(option for option in _clarify(knowledge)["interaction"]["options"]
+                                    if option["id"] != "other")
+                    choices = tuple(Option(item["id"], item["label"]) for item in choices[:4])
+                interaction = Interaction(InputKind.SINGLE_SELECT, "support_scope", choices) if choices else None
+                answer = _reply(GuidanceResponse(meaning["response"],
+                    "needs_input" if interaction else "clarification", interaction), "conversation")
+                answer["routing"] = "unified-intent"
+                # Clarification does not discard evidence, topic or a live task.
+                candidate = (retained(pending=bool(interaction)) if conversation.topic else
+                    conversation.updated(topic=message, pending=bool(interaction)))
+                return finish(answer, candidate)
+            if kind in ("product", "wordpress"):
+                target = meaning["target"] if kind == "product" else "wordpress"
+                reference = re.search(r"\b(?:it|that|those|previous|again|step)\b", message.lower())
+                correction = re.search(r"\b(?:i meant|instead|switch to|rather than)\b", message.lower())
+                topic = conversation.topic if reference and conversation.topic and not correction else message
+                answer = _choose(topic, target, knowledge)
+                answer["routing"] = "unified-intent"
+                return finish(answer, conversation.updated(topic=topic, scope=target,
+                    pending=answer["status"] == "needs_input"),
+                    workflow if workflow is not None and workflow.product_id == target else None)
+            if kind == "unresolved" and workflow is not None and workflow.status == "awaiting_result":
+                return workflow_response("failed")
+            if kind == "followup" and workflow is not None and workflow.status == "awaiting_result":
+                return workflow_response("why")
+            if kind in ("followup", "simplify") and conversation.topic:
+                return previous_guidance(kind)
+            if kind == "unresolved":
+                wording = meaning["response"] or (
+                    "What happened when you tried it?" if conversation.evidence_id else
+                    "What didn't work? Tell me what you were trying to do.")
+                answer = _reply(GuidanceResponse(wording, "clarification"), "conversation")
+                answer["routing"] = "unified-intent"
+                return finish(answer, retained(outcome="unresolved"))
+            # Explicit success and invalid-output feedback use the same existing
+            # deterministic implementation below, without another inference.
+        else:
+            kind = fallback.kind if fallback is not None else "new"
+
+        if kind == "resolved":
+            response = ("Glad that worked! Let me know if you need help with anything else."
+                        if conversation.evidence_id else "Glad to hear it! What were you working on?")
+            return finish(_reply(GuidanceResponse(response, "grounded"), "conversation"),
+                retained(outcome="resolved") if conversation.evidence_id else conversation)
+        if kind == "unresolved":
+            response = ("What didn't work? Tell me what you were trying to do."
+                        if not conversation.evidence_id else
+                        "What happened when you tried it? Did you see an error message?")
             return finish(_reply(GuidanceResponse(response, "clarification"), "conversation"),
-                conversation.updated(topic=conversation.topic, scope=conversation.scope,
-                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
-        # A general request for help has no product target yet. Ask instead
-        # of allowing a small classifier to label it unrelated.
+                retained(outcome="unresolved"))
+        if conversation.topic and kind in ("simplify", "followup"):
+            return previous_guidance(kind)
+        if state.model is not None:
+            answer = _clarify(knowledge)
+            answer["routing"] = "brain-clarify"
+            return finish(answer, retained(topic=conversation.topic or message, pending=True))
+
+        # Existing offline deterministic behavior. Normal Ollama conversations
+        # never enter a second classifier or a separate conversational draft.
+        lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
+        greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
+        pleasantry = lowered in ("can i ask something else", "can i ask another question",
+                                 "thank you", "thanks", "how are you",
+                                 "how are you today", "how is your day",
+                                 "good morning", "good evening")
+        if greeting or pleasantry:
+            response = ("Hi! I'm here if you need help with WordPress or your registered products."
+                        if greeting else "Of course! What would you like help with?")
+            return finish(_reply(GuidanceResponse(response, "grounded"), "conversation"), retained())
+        generic_help = (_is_generic_help(message) or bool(re.fullmatch(
+            r"(?:i (?:dont|do not) know (?:where|how) to start|"
+            r"(?:im|i am) (?:lost|confused)|"
+            r"(?:i have no idea|not sure|no idea) (?:where|how) to start|"
+            r"what (?:can|should) i do)", lowered)))
         if generic_help:
-            candidate = conversation.updated(topic=message, scope=None, pending=True)
-            drafted = dynamic_welcome(with_options=True)
-            if drafted is not None:
-                # No options means an open-ended follow-up, rather than an
-                # invalid selection. The user can always type freely.
-                return finish(drafted, candidate.updated(pending=bool(drafted["interaction"])))
-            return finish(_clarify(knowledge), candidate)
-
-        if kind == "clarify" and conversation.topic and conversational:
-            return finish(conversation_answer(
-                "Could you tell me which part you mean?", "clarification"),
-                conversation.updated(topic=conversation.topic, scope=conversation.scope,
-                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
-
-        # Explicit corrections override the previous scope, rather than carrying
-        # old product-specific evidence into a newly chosen product.
+            return finish(_clarify(knowledge), conversation.updated(topic=message, pending=True))
         correction = re.search(r"\b(?:i meant|instead|switch to|rather than)\b", message.lower())
         reference = re.search(r"\b(?:it|that|those|previous|again|step)\b", message.lower())
         topic = conversation.topic if reference and conversation.topic and not correction else message
         candidate = conversation.updated(topic=topic, scope=None, pending=False)
-
-        if state.model is not None:
-            try:
-                prompt = (f"Previous user question: {conversation.topic}\n"
-                          f"Current user request: {message}"
-                          if (reference or correction) and conversation.topic else message)
-                decision = asyncio.run(select_scope(state.model, prompt, knowledge))
-            except Exception:
-                answer = _clarify(knowledge)
-                answer["message"] = "The local Brain is unavailable. Please choose a supported area below."
-                answer["routing"] = "brain-unavailable"
-                return finish(answer, candidate.updated(pending=True))
-            if decision == "other":
-                # A model's scope guess is not a user-confirmed rejection.
-                # Only an explicit selection of Other enters the unsupported contract.
-                answer = _clarify(knowledge)
-                answer["message"] = "Could you tell me a little more about what you're trying to do?"
-                answer["routing"] = "brain-clarify"
-                return finish(answer, candidate.updated(pending=True))
-            if decision is not None:
-                answer = _choose(topic, decision, knowledge)
-                if answer["status"] in ("grounded", "unsupported", "needs_input"):
-                    answer["routing"] = "brain"
-                    scope = decision if answer["status"] in ("grounded", "needs_input") else None
-                    return finish(answer, candidate.updated(scope=scope, pending=answer["status"] == "needs_input"))
-            answer = _clarify(knowledge)
-            answer["routing"] = "brain-clarify"
-            return finish(answer, candidate.updated(pending=True))
 
         words = set(message.lower().split())
         hits = [p.id for p in knowledge.products.values()

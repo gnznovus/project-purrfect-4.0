@@ -1,0 +1,142 @@
+{
+  "version": {
+    "version": "0.40.4"
+  },
+  "ps": {
+    "models": [
+      {
+        "name": "llama3.2:3b",
+        "model": "llama3.2:3b",
+        "size": 2324021902,
+        "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "llama",
+          "families": [
+            "llama"
+          ],
+          "parameter_size": "3.2B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-10-19T12:37:40.0068029+07:00",
+        "size_vram": 2324021902,
+        "context_length": 2048,
+        "runner": "llamacpp"
+      }
+    ]
+  },
+  "measurements": [
+    {
+      "message": "Hello Purr, how are you?",
+      "wall_ms": 7962.13,
+      "decision": {
+        "intent": "social",
+        "target": null,
+        "response": "I'm doing great, thanks for asking! How can I help you today?",
+        "options": []
+      },
+      "diagnostics": [
+        {
+          "stage": "Ollama",
+          "model_calls": 1,
+          "http_ms": 7950.2,
+          "done_reason": "stop",
+          "system_chars": 1925,
+          "user_chars": 193,
+          "response_chars": 93,
+          "total_ms": 7871.28,
+          "load_ms": 5005.36,
+          "prompt_eval_ms": 1451.51,
+          "eval_ms": 1382.11,
+          "prompt_eval_count": 442,
+          "eval_count": 25,
+          "prompt_eval_tokens_per_second": 304.51,
+          "eval_tokens_per_second": 18.09,
+          "transport_ms": 78.92,
+          "result": "Parsed JSON",
+          "ms": 7953.47
+        },
+        {
+          "stage": "Validation",
+          "result": "Intent: social",
+          "target": "none"
+        }
+      ]
+    },
+    {
+      "message": "I need help finding my way around.",
+      "wall_ms": 1845.05,
+      "decision": {
+        "intent": "help",
+        "target": null,
+        "response": "What area of Purr Assistant are you having trouble with?",
+        "options": []
+      },
+      "diagnostics": [
+        {
+          "stage": "Ollama",
+          "model_calls": 1,
+          "http_ms": 1843.26,
+          "done_reason": "stop",
+          "system_chars": 1925,
+          "user_chars": 203,
+          "response_chars": 86,
+          "total_ms": 1833.36,
+          "load_ms": 6.79,
+          "prompt_eval_ms": 728.49,
+          "eval_ms": 1091.63,
+          "prompt_eval_count": 442,
+          "eval_count": 21,
+          "prompt_eval_tokens_per_second": 606.73,
+          "eval_tokens_per_second": 19.24,
+          "transport_ms": 9.9,
+          "result": "Parsed JSON",
+          "ms": 1844.06
+        },
+        {
+          "stage": "Validation",
+          "result": "Intent: help",
+          "target": "none"
+        }
+      ]
+    },
+    {
+      "message": "How can I edit blocks in mock-layout?",
+      "wall_ms": 1202.72,
+      "decision": {
+        "intent": "product",
+        "target": "mock-layout",
+        "response": "",
+        "options": []
+      },
+      "diagnostics": [
+        {
+          "stage": "Ollama",
+          "model_calls": 1,
+          "http_ms": 1200.78,
+          "done_reason": "stop",
+          "system_chars": 1925,
+          "user_chars": 206,
+          "response_chars": 56,
+          "total_ms": 1191.57,
+          "load_ms": 3.73,
+          "prompt_eval_ms": 169.81,
+          "eval_ms": 1012.75,
+          "prompt_eval_count": 443,
+          "eval_count": 19,
+          "prompt_eval_tokens_per_second": 2608.8,
+          "eval_tokens_per_second": 18.76,
+          "transport_ms": 9.21,
+          "result": "Parsed JSON",
+          "ms": 1201.6
+        },
+        {
+          "stage": "Validation",
+          "result": "Intent: product",
+          "target": "mock-layout"
+        }
+      ]
+    }
+  ]
+}

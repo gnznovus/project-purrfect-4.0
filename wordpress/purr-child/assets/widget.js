@@ -92,7 +92,8 @@
     }
     if (entry.trace && typeof entry.trace === 'object' && Array.isArray(entry.trace.stages)) {
       const details = element('details', 'pc-debug');
-      const summary = element('summary', '', 'Debug trace · ' + (entry.trace.duration_ms ?? '?') + ' ms');
+      const summary = element('summary', '', 'Debug trace · ' + (entry.trace.duration_ms ?? '?') + ' ms' +
+        (entry.trace.model_calls == null ? '' : ' · ' + entry.trace.model_calls + ' model calls'));
       details.append(summary);
       const list = element('ol', '');
       for (const stage of entry.trace.stages) {
@@ -105,7 +106,11 @@
           stage.prompt_eval_ms == null ? '' : 'prompt: ' + stage.prompt_eval_ms + ' ms',
           stage.eval_ms == null ? '' : 'generation: ' + stage.eval_ms + ' ms',
           stage.prompt_eval_count == null ? '' : 'input: ' + stage.prompt_eval_count + ' tokens',
-          stage.eval_count == null ? '' : 'output: ' + stage.eval_count + ' tokens'].filter(Boolean);
+          stage.eval_count == null ? '' : 'output: ' + stage.eval_count + ' tokens',
+          stage.eval_tokens_per_second == null ? '' : stage.eval_tokens_per_second + ' output tokens/s',
+          stage.transport_ms == null ? '' : 'transport: ' + stage.transport_ms + ' ms',
+          stage.done_reason ? 'stop: ' + stage.done_reason : '',
+          stage.error ? 'error: ' + stage.error : ''].filter(Boolean);
         list.append(element('li', '', bits.join(' · ')));
       }
       details.append(list);

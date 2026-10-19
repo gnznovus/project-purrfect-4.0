@@ -80,9 +80,9 @@ class ScriptedBrain:
 
 
 def test_brain_verified_wordpress_answer_only():
-    state = LocalState(model=ScriptedBrain('{"selection":"wordpress"}'))
+    state = LocalState(model=ScriptedBrain('{"intent":"wordpress","target":"wordpress","response":null}'))
     result = respond(request("brain-1", "I forgot my WordPress login password"), state)
-    assert result["routing"] == "brain"
+    assert result["routing"] == "unified-intent"
     assert [e["id"] for e in result["sources"]] == ["wp-login-basic"]
 
 
@@ -95,7 +95,7 @@ def test_brain_uncertainty_and_invented_product_clarify():
 
 
 def test_brain_rejects_deactivated_products():
-    state = LocalState(model=ScriptedBrain('{"selection":"mock-layout"}'))
+    state = LocalState(model=ScriptedBrain('{"intent":"product","target":"mock-layout","response":null}'))
     removed = {"active": [], "signals": []}
     result = respond(request("brain-3", "Mock layout", registry=removed), state)
     assert result["status"] == "needs_input"
@@ -113,7 +113,7 @@ def test_unavailable_model_degrades_to_clarification():
 
 
 def test_17_greeting_and_conversational_request():
-    state = LocalState(model=ScriptedBrain('{"selection":"other"}'))
+    state = LocalState(model=ScriptedBrain('{"intent":"social","target":null,"response":"Of course! What is on your mind?"}'))
     for question in ("Hi Purra!", "Can I ask something else?"):
         response = respond(request("conversation", question), state)
         assert response["scope"] == "conversation"
@@ -152,8 +152,8 @@ def test_17_followup_uses_original_topic_and_current_inventory():
             self.questions = []
         async def complete(self, system, user):
             import json
-            self.questions.append(json.loads(user)["question"])
-            return '{"selection":"mock-layout"}'
+            self.questions.append(json.loads(user))
+            return '{"intent":"product","target":"mock-layout","response":null}'
     brain = CapturingBrain()
     state = LocalState(model=brain)
     first = respond(request("follow", "How do I edit layout blocks?"), state)
@@ -164,6 +164,8 @@ def test_17_followup_uses_original_topic_and_current_inventory():
     assert next_result["status"] == "clarification"
     assert next_result["context"]["last_question"] == first["context"]["last_question"]
     assert "previous step" in next_result["message"].lower()
+    assert len(brain.questions) == 2
+    assert brain.questions[-1]["conversation"]["topic"] == first["context"]["last_question"]
 
 
 def test_17_json_object_empty_context_first_message():
@@ -246,21 +248,25 @@ def test_17b_restored_intent_choice_rechecks_current_product():
     assert invalid["status"] == "needs_input"
 
 
-def test_17b_generic_help_offers_scope_choices_without_calling_model():
-    class ModelMustNotRun:
+def test_generic_help_model_failure_still_offers_valid_scope_choices():
+    class UnavailableBrain:
+        calls = 0
         async def complete(self, system, user):
-            raise AssertionError("Generic help must not invoke the Brain")
-    state = LocalState(model=ModelMustNotRun())
+            self.calls += 1
+            raise ConnectionError("Local model unavailable")
+    state = LocalState(model=UnavailableBrain())
     reply = respond(request("help-session", "i need some help"), state)
     assert reply["status"] == "needs_input"
     assert reply["interaction"]["key"] == "support_scope"
     assert reply["context"]["pending"] is True
+    assert state.model.calls == 1
     chosen = respond(request("help-session", "", "mock-layout"), state)
     assert chosen["status"] == "needs_input"
     assert chosen["interaction"]["key"] == "support_intent"
     guide = respond(request("help-session", "", "guide:mock-layout:0"), state)
     assert guide["status"] == "grounded"
     assert [x["id"] for x in guide["sources"]] == ["a"]
+    assert state.model.calls == 1
 
 
 def test_17c_three_step_flow_and_correct_pending_scope():
@@ -305,9 +311,7 @@ def test_generic_help_variants_do_not_classify_as_outside_support():
 def test_dynamic_help_generates_validated_scope_buttons():
     class WelcomeBrain:
         async def complete(self, system, user):
-            if "Reply ONLY with JSON keys" in system:
-                return '{"response":"I can help! Which area is causing trouble?","options":[{"id":"mock-layout","label":"Layout help"},{"id":"wordpress","label":"WordPress basics"}]}'
-            return '{"kind":"new","reply":null}'
+            return '{"intent":"help","target":null,"response":"I can help! Which area is causing trouble?","options":[{"id":"mock-layout","label":"Layout help"},{"id":"wordpress","label":"WordPress basics"}]}'
     state = LocalState(model=WelcomeBrain())
     answer = respond(request("dynamic-help", "I need help"), state)
     assert answer["message"] == "I can help! Which area is causing trouble?"
@@ -323,7 +327,7 @@ def test_dynamic_help_generates_validated_scope_buttons():
 def test_dynamic_options_cannot_invent_registered_product():
     class InventingBrain:
         async def complete(self, system, user):
-            return '{"response":"Choose a tool.","options":[{"id":"unregistered-plugin","label":"Magic tool"}]}'
+            return '{"intent":"help","target":null,"response":"Choose a tool.","options":[{"id":"unregistered-plugin","label":"Magic tool"}]}'
     result = respond(request("invented-choice", "I need help"), LocalState(model=InventingBrain()))
     assert result["status"] == "needs_input"
     assert {item["id"] for item in result["interaction"]["options"]} == {"mock-layout", "wordpress", "other"}
@@ -332,9 +336,7 @@ def test_dynamic_options_cannot_invent_registered_product():
 def test_dynamic_small_talk_without_options():
     class NiceBrain:
         async def complete(self, system, user):
-            if "Reply ONLY with JSON keys" in system:
-                return '{"response":"Doing well, thanks for asking! What is on your mind?","options":[]}'
-            return '{"kind":"social","reply":"How can I help?"}'
+            return '{"intent":"social","target":null,"response":"Doing well, thanks for asking! What is on your mind?","options":[]}'
     answer = respond(request("social-turn", "how are you today?"), LocalState(model=NiceBrain()))
     assert answer["message"] == "Doing well, thanks for asking! What is on your mind?"
     assert answer["interaction"] is None
@@ -344,9 +346,7 @@ def test_dynamic_small_talk_without_options():
 def test_social_chat_does_not_show_scope_buttons_even_if_model_suggests_them():
     class PushyBrain:
         async def complete(self, system, user):
-            if "Reply ONLY with JSON keys" in system:
-                return '{"response":"You are very welcome!","options":[{"id":"wordpress","label":"WordPress"}]}'
-            return '{"kind":"social","reply":"You are very welcome!"}'
+            return '{"intent":"social","target":null,"response":"You are very welcome!","options":[{"id":"wordpress","label":"WordPress"}]}'
     state = LocalState(model=PushyBrain())
     for message in ("Hi Purr!", "How are you today?", "Thank you!"):
         answer = respond(request("no-button-social", message), state)
@@ -357,9 +357,7 @@ def test_social_chat_does_not_show_scope_buttons_even_if_model_suggests_them():
 def test_lost_user_is_guided_not_rejected_as_unsupported():
     class SupportBrain:
         async def complete(self, system, user):
-            if "Reply ONLY with JSON keys" in system:
-                return '{"response":"I can help you find a starting point. What are you working on?","options":[{"id":"wordpress","label":"WordPress basics"}]}'
-            return '{"kind":"new","reply":null}'
+            return '{"intent":"help","target":null,"response":"I can help you find a starting point. What are you working on?","options":[{"id":"wordpress","label":"WordPress basics"}]}'
     for message in ("I don't know where to start", "I'm confused", "I have no idea where to start"):
         answer = respond(request("lost-" + message, message), LocalState(model=SupportBrain()))
         assert answer["scope"] == "conversation"
@@ -379,7 +377,7 @@ def test_social_and_generic_help_use_one_model_call_each():
         brain = CountingBrain()
         answer = respond(request("one-call-" + phrase, phrase), LocalState(model=brain))
         assert len(brain.calls) == 1
-        assert brain.calls[0][1]["temperature"] == 0.4
+        assert brain.calls[0][1]["temperature"] == 0.0
         assert answer["message"].startswith("Happy to help")
 
 
@@ -462,7 +460,8 @@ def test_debug_trace_opt_in_and_no_model_text_leak():
     assert traced["routing"] == "unified-intent"
     assert traced["debug"]["duration_ms"] >= 0
     assert [step["stage"] for step in traced["debug"]["stages"]] == [
-        "Ollama", "Validation", "Unified decision", "Final route"]
+        "Discovery and knowledge", "Session lock", "Ollama", "Validation", "Unified decision", "Final route"]
+    assert traced["debug"]["model_calls"] == 1
     assert not any("Hey there!" in str(step) for step in traced["debug"]["stages"])
     assert "debug" not in traced["context"]
 
