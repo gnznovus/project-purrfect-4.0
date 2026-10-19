@@ -253,7 +253,7 @@ def respond(payload: dict, state: LocalState) -> dict:
         generic_help = (_is_generic_help(message) or bool(re.fullmatch(
             r"(?:i (?:dont|do not) know (?:where|how) to start|"
             r"(?:im|i am) (?:lost|confused)|"
-            r"(?:not sure|no idea) (?:where|how) to start|"
+            r"(?:i have no idea|not sure|no idea) (?:where|how) to start|"
             r"what (?:can|should) i do)", lowered)))
         # Avoid a second model call for full product questions; the existing
         # scoped router handles them. Short ambiguous turns belong to dialogue.
