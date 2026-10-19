@@ -152,10 +152,10 @@ def _validate_intent(state: IntentState) -> dict:
         validated = []
     # A model must never turn ambiguous or negated success into an irreversible
     # resolution. User confirmation and workflow guards remain deterministic.
-    if kind == "resolved":
+    if kind in ("resolved", "unsupported"):
         kind = "clarify"
-    if kind == "unsupported":
-        kind = "clarify"
+        response = "Could you tell me a little more about what you mean?"
+        validated = []
     return {"decision": {"intent": kind, "target": target,
                          "response": response.strip(), "options": validated}}
 
