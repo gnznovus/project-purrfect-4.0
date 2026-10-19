@@ -29,7 +29,7 @@ add_action('wp_ajax_purr_child_chat', static function (): void {
         }
         $context = (object) $parsed;
     }
-    $response = wp_remote_post('http://purra:8765/v1/chat', [
+    $response = wp_remote_post(rtrim(PURR_ASSISTANT_SERVICE_URL, '/') . '/v1/chat', [
         'timeout' => 25,
         'headers' => ['Content-Type' => 'application/json'],
         'body' => wp_json_encode([
