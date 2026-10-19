@@ -27,7 +27,7 @@
   // No model-generated URL, element ID, or CSS selector is ever executed.
   const guidanceTargets = Array.isArray(cfg.guidanceTargets) ? cfg.guidanceTargets : [];
   function findDestination(message) {
-    if (!/\\b(where|find|locate|show me|take me to|navigate to)\\b/i.test(message)) return null;
+    if (!/\b(where|find|locate|show me|take me to|navigate to)\b/i.test(message)) return null;
     const normalized = message.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const matches = guidanceTargets.filter(target => Array.isArray(target.keywords) &&
       target.keywords.some(phrase => typeof phrase === 'string' && phrase.length >= 5 &&
