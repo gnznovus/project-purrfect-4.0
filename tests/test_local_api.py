@@ -339,3 +339,30 @@ def test_dynamic_small_talk_without_options():
     assert answer["message"] == "Doing well, thanks for asking! What is on your mind?"
     assert answer["interaction"] is None
     assert answer["scope"] == "conversation"
+
+
+def test_social_chat_does_not_show_scope_buttons_even_if_model_suggests_them():
+    class PushyBrain:
+        async def complete(self, system, user):
+            if "Reply ONLY with JSON keys" in system:
+                return '{"response":"You are very welcome!","options":[{"id":"wordpress","label":"WordPress"}]}'
+            return '{"kind":"social","reply":"You are very welcome!"}'
+    state = LocalState(model=PushyBrain())
+    for message in ("Hi Purr!", "How are you today?", "Thank you!"):
+        answer = respond(request("no-button-social", message), state)
+        assert answer["interaction"] is None
+        assert answer["scope"] == "conversation"
+
+
+def test_lost_user_is_guided_not_rejected_as_unsupported():
+    class SupportBrain:
+        async def complete(self, system, user):
+            if "Reply ONLY with JSON keys" in system:
+                return '{"response":"I can help you find a starting point. What are you working on?","options":[{"id":"wordpress","label":"WordPress basics"}]}'
+            return '{"kind":"new","reply":null}'
+    for message in ("I don't know where to start", "I'm confused", "I have no idea where to start"):
+        answer = respond(request("lost-" + message, message), LocalState(model=SupportBrain()))
+        assert answer["scope"] == "conversation"
+        assert answer["interaction"]["key"] == "support_scope"
+        assert answer["message"].startswith("I can help")
+        assert answer["status"] != "unsupported"
