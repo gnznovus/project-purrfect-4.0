@@ -68,6 +68,7 @@ class LangGraphConversation:
 import asyncio
 import json
 import re
+from time import perf_counter
 from purrfect.conversation_intent import PURR_VOICE
 
 
@@ -78,6 +79,7 @@ class IntentState(TypedDict, total=False):
     catalog: dict
     proposal: dict | None
     decision: dict | None
+    diagnostics: list
 
 
 def _understand(state: IntentState) -> dict:
@@ -103,6 +105,7 @@ def _understand(state: IntentState) -> dict:
         "conversation": state["context"],
         "registered_choices": state["catalog"],
     }, ensure_ascii=False)
+    started = perf_counter()
     try:
         raw = asyncio.run(state["model"].complete(system, prompt, temperature=0.4))
     except TypeError:
@@ -111,11 +114,12 @@ def _understand(state: IntentState) -> dict:
         value = json.loads(raw)
     except (ValueError, TypeError):
         value = None
-    return {"proposal": value}
+    return {"proposal": value, "diagnostics": [{"stage": "Ollama", "ms": round((perf_counter() - started) * 1000), "result": "Parsed JSON" if isinstance(value, dict) else "Invalid JSON"}]}
 
 
 def _validate_intent(state: IntentState) -> dict:
     value = state.get("proposal")
+    diagnostics = list(state.get("diagnostics", []))
     valid_intents = {"social", "help", "product", "wordpress", "resolved",
                      "unresolved", "followup", "clarify", "unsupported"}
     if not isinstance(value, dict) or set(value) != {"intent", "target", "response", "options"}:
@@ -157,7 +161,7 @@ def _validate_intent(state: IntentState) -> dict:
         response = "Could you tell me a little more about what you mean?"
         validated = []
     return {"decision": {"intent": kind, "target": target,
-                         "response": response.strip(), "options": validated}}
+                         "response": response.strip(), "options": validated}, "diagnostics": diagnostics + [{"stage": "Validation", "result": "Intent: " + kind, "target": target or "none"}]}
 
 
 def build_intent_graph():
@@ -173,7 +177,7 @@ def build_intent_graph():
 _UNIFIED_INTENT_GRAPH = None
 
 
-def understand_message(model, message: str, context: dict, catalog: dict) -> dict | None:
+def understand_message(model, message: str, context: dict, catalog: dict, diagnostics: list | None = None) -> dict | None:
     """One model call; LangGraph validates the proposal before legacy handling."""
     global _UNIFIED_INTENT_GRAPH
     if _UNIFIED_INTENT_GRAPH is None:
@@ -181,4 +185,6 @@ def understand_message(model, message: str, context: dict, catalog: dict) -> dic
     result = _UNIFIED_INTENT_GRAPH.invoke({
         "model": model, "message": message, "context": context, "catalog": catalog,
     })
+    if diagnostics is not None:
+        diagnostics.extend(result.get("diagnostics", []))
     return result.get("decision")
