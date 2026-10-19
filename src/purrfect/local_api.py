@@ -262,7 +262,10 @@ def respond(payload: dict, state: LocalState) -> dict:
                               and not generic_help
                               and (conversation.topic or len(lowered.split()) <= 3)))
         move = None
-        if state.model is not None and conversational:
+        # Simple social turns and vague requests go straight to a single
+        # conversational draft. Avoid classifying and then generating twice.
+        direct_dialogue = greeting or pleasantry or generic_help
+        if state.model is not None and conversational and not direct_dialogue:
             try:
                 move = asyncio.run(classify_move(state.model, message, {
                     "has_topic": bool(conversation.topic),
@@ -305,6 +308,10 @@ def respond(payload: dict, state: LocalState) -> dict:
             return _reply(GuidanceResponse(wording, "needs_input" if interaction else "grounded",
                                            interaction), "conversation")
         if greeting or pleasantry:
+            if direct_dialogue:
+                drafted = dynamic_welcome(with_options=False)
+                if drafted is not None:
+                    return finish(drafted, conversation.updated(pending=False))
             if kind in ("new", "clarify"):
                 kind = "social"
             if kind == "social":
