@@ -40,3 +40,13 @@ def test_inference_smoke_test_uses_backend_http_path():
     assert "exec -T purra python -" in script
     assert "if ($LASTEXITCODE -ne 0)" in script
     assert "ollama run $Model" not in script
+
+
+def test_wordpress_probes_ignore_compose_status_stderr_and_check_exit_status():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "function Test-WP" in script
+    assert "$ErrorActionPreference = 'Continue'" in script
+    assert "wp @commands 2>&1 | Out-Null" in script
+    assert "return ($LASTEXITCODE -eq 0)" in script
+    assert "Test-WP $service @('core', 'version')" in script
+    assert "Test-WP $service @('core', 'is-installed')" in script
