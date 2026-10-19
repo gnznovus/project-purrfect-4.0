@@ -374,7 +374,7 @@ def test_social_and_generic_help_use_one_model_call_each():
             self.calls = []
         async def complete(self, system, user, **kwargs):
             self.calls.append((system, kwargs))
-            return '{"response":"Happy to help! What would you like to explore?","options":[]}'
+            return '{"intent":"social","target":null,"response":"Happy to help! What would you like to explore?","options":[]}'
     for phrase in ("Hi Purr!", "How are you today?", "I need help"):
         brain = CountingBrain()
         answer = respond(request("one-call-" + phrase, phrase), LocalState(model=brain))
@@ -404,3 +404,48 @@ def test_purr_personality_is_shared_by_social_drafting_and_move_classification()
     assert "functioning within normal parameters" in PURR_VOICE
     assert all("thoughtful big sister" in prompt for prompt in social.prompts + classifier.prompts)
     assert "empty options array" in social.prompts[0]
+
+
+def test_unified_intent_routes_typo_greeting_in_one_call():
+    class UnderstandingBrain:
+        def __init__(self):
+            self.calls = 0
+        async def complete(self, system, user, **kwargs):
+            self.calls += 1
+            return '{"intent":"social","target":null,"response":"Hey there! Nice to see you.","options":[]}'
+    brain = UnderstandingBrain()
+    output = respond(request("typo-hi", "Hii Purrr!!"), LocalState(model=brain))
+    assert output["routing"] == "unified-intent"
+    assert output["message"] == "Hey there! Nice to see you."
+    assert output["interaction"] is None
+    assert brain.calls == 1
+
+
+def test_unified_intent_ambiguous_help_uses_only_registered_buttons():
+    class UnderstandingBrain:
+        async def complete(self, system, user, **kwargs):
+            return '{"intent":"help","target":null,"response":"Tell me which part is tricky.","options":[{"id":"mock-layout","label":"Layout"}]}'
+    state = LocalState(model=UnderstandingBrain())
+    output = respond(request("typo-help", "i ned hlp"), state)
+    assert output["routing"] == "unified-intent"
+    assert output["interaction"]["options"] == [{"id":"mock-layout","label":"Layout"}]
+    followup = respond(request("typo-help", "", "mock-layout"), state)
+    assert followup["scope"] == "product"
+
+
+def test_unified_intent_rejects_invented_product_without_leaking_claims():
+    class FakeBrain:
+        async def complete(self, system, user, **kwargs):
+            return '{"intent":"product","target":"made-up","response":"I can publish your site.","options":[]}'
+    output = respond(request("invented", "publish my site"), LocalState(model=FakeBrain()))
+    assert output["routing"] != "unified-intent" or output["scope"] != "product"
+    assert "I can publish your site" not in output["message"]
+
+
+def test_unified_intent_handles_failed_step_without_marking_success():
+    class FailureBrain:
+        async def complete(self, system, user, **kwargs):
+            return '{"intent":"unresolved","target":null,"response":"Sorry that did not help. What happened?","options":[]}'
+    output = respond(request("broken", "it stil dosnt work"), LocalState(model=FailureBrain()))
+    assert output["routing"] == "unified-intent"
+    assert output["context"]["last_outcome"] == "unresolved"
