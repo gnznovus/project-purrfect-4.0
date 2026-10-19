@@ -58,8 +58,10 @@ function purr_child_validate_api_endpoint(string $value): string|WP_Error {
         return new WP_Error('invalid_endpoint', 'Use an HTTPS API base URL without credentials, query or fragment.');
     }
     $normalized = untrailingslashit($value);
-    if (!wp_http_validate_url($normalized)) {
-        return new WP_Error('invalid_endpoint', 'The API endpoint must be a valid public HTTPS address.');
+    // Syntactic validation only: saving settings must work before Purr is online.
+    // Remote request destinations require separate DNS/IP checks at call time.
+    if (!filter_var($normalized, FILTER_VALIDATE_URL)) {
+        return new WP_Error('invalid_endpoint', 'Enter a valid HTTPS API base URL.');
     }
     return $normalized;
 }
