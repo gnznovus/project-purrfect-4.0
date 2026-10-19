@@ -61,3 +61,11 @@ def test_fresh_lab_admin_credentials_are_generated_without_interactive_prompt():
     assert "Password: $adminPassword" in script
     assert "if (-not (Test-WP $service @('core', 'is-installed')))" in script
     assert "Enter a local lab admin password when prompted" not in script
+
+
+def test_bootstrap_triggers_real_heartbeat_without_fixed_minute_sleep():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "Compose exec -T clock php /opt/purr-child-heartbeat.php" in script
+    assert "Compose exec -T clock_b php /opt/purr-child-heartbeat.php" in script
+    assert "Start-Sleep -Seconds 65" not in script
+    assert "WP 'cli' @('option', 'get', 'purr_child_registry', '--format=json')" in script
