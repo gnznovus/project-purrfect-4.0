@@ -12,21 +12,21 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
 function Step([string]$message) { Write-Host "[Purrfect] $message" -ForegroundColor Cyan }
-function Docker {
-    & docker @args
+function Invoke-DockerCli {
+    & docker.exe @args
     if ($LASTEXITCODE -ne 0) { throw "Docker command failed (exit $LASTEXITCODE): $($args -join ' ')" }
 }
 function Compose {
-    & docker compose @composeArgs @args
+    & docker.exe compose @composeArgs @args
     if ($LASTEXITCODE -ne 0) { throw "Docker Compose failed (exit $LASTEXITCODE): $($args -join ' ')" }
 }
 function WP([string]$service, [string[]]$commands) {
-    & docker compose @composeArgs --profile tools run --rm -T $service wp @commands
+    & docker.exe compose @composeArgs --profile tools run --rm -T $service wp @commands
     if ($LASTEXITCODE -ne 0) { throw "WP-CLI failed on ${service}: $($commands -join ' ')" }
 }
 function WaitForWP([string]$service) {
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
-        & docker compose @composeArgs --profile tools run --rm -T $service wp core version *> $null
+        & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core version *> $null
         if ($LASTEXITCODE -eq 0) { return }
         Start-Sleep -Seconds 3
     }
@@ -35,11 +35,11 @@ function WaitForWP([string]$service) {
 function PrepareSite([string]$service, [string]$url, [string]$title) {
     Step "Checking $title"
     WaitForWP $service
-    & docker compose @composeArgs --profile tools run --rm -T $service wp core is-installed *> $null
+    & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core is-installed *> $null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Fresh WordPress setup for $url. Enter a local lab admin password when prompted."
         # Interactive WP-CLI prompt prevents password from being embedded in Git or process args.
-        & docker compose @composeArgs --profile tools run --rm $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
+        & docker.exe compose @composeArgs --profile tools run --rm $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
         if ($LASTEXITCODE -ne 0) { throw "WordPress installation failed on $service" }
     }
     WP $service @('plugin', 'activate', 'purr-child', 'mock-layout', 'mock-translation')
@@ -49,8 +49,8 @@ function PrepareSite([string]$service, [string]$url, [string]$title) {
 try {
     Step 'Checking Docker Desktop and Compose'
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI not found. Install/start Docker Desktop, then retry.' }
-    Docker info --format '{{.ServerVersion}}'
-    Docker compose version
+    Invoke-DockerCli info --format '{{.ServerVersion}}'
+    Invoke-DockerCli compose version
 
     $composeArgs = @('-f', 'wordpress/lab/compose.yaml')
     if ($SiteB) { $composeArgs += @('-f', 'wordpress/lab/compose.site-b.yaml') }
@@ -67,25 +67,25 @@ try {
     Step 'Waiting for Ollama to accept connections'
     $ollamaReady = $false
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        & docker compose @composeArgs exec -T ollama ollama list *> $null
+        & docker.exe compose @composeArgs exec -T ollama ollama list *> $null
         if ($LASTEXITCODE -eq 0) { $ollamaReady = $true; break }
         Start-Sleep -Seconds 3
     }
     if (-not $ollamaReady) { throw 'Ollama service did not become ready.' }
     Step "Checking required Ollama model $Model"
-    & docker compose @composeArgs exec -T ollama ollama show $Model *> $null
+    & docker.exe compose @composeArgs exec -T ollama ollama show $Model *> $null
     if ($LASTEXITCODE -ne 0) {
         Step "Downloading Ollama model $Model (preserved in its Docker volume)"
         $pulled = $false
         for ($attempt = 1; $attempt -le 3; $attempt++) {
-            & docker compose @composeArgs exec -T ollama ollama pull $Model
+            & docker.exe compose @composeArgs exec -T ollama ollama pull $Model
             if ($LASTEXITCODE -eq 0) { $pulled = $true; break }
             if ($attempt -lt 3) { Step 'Download interrupted; retrying in 5 seconds'; Start-Sleep -Seconds 5 }
         }
         if (-not $pulled) { throw 'Ollama model download failed after 3 attempts. Rerun bootstrap to resume.' }
     }
     Step 'Running actual Ollama inference smoke test'
-    $reply = & docker compose @composeArgs exec -T ollama ollama run $Model 'Reply with the single word READY.'
+    $reply = & docker.exe compose @composeArgs exec -T ollama ollama run $Model 'Reply with the single word READY.'
     if ($LASTEXITCODE -ne 0 -or -not (($reply | Out-String).Trim())) {
         throw 'Ollama inference failed. The lab was not declared ready.'
     }
