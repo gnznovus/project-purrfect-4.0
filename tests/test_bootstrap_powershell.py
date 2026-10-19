@@ -30,13 +30,13 @@ def test_missing_ollama_model_is_pulled_without_failing_show():
     assert "if (-not $pulled)" in script
 
 
-def test_inference_smoke_test_reports_progress_and_timeout():
+def test_inference_smoke_test_uses_backend_http_path():
     script = BOOTSTRAP.read_text(encoding="utf-8-sig")
-    assert "$inferenceArgs = @('compose') + @($composeArgs)" in script
-    assert "Start-Process -FilePath 'docker.exe'" in script
-    assert "Ollama still generating" in script
-    assert "inferenceTimeoutSeconds = 600" in script
-    assert "if ($null -eq $inferenceProcess)" in script
-    assert "$inferenceProcess.WaitForExit(2000)" in script
-    assert "Stop-Process -Id $inferenceProcess.Id" in script
-    assert "Remove-Item $inferenceOut, $inferenceErr" in script
+    assert "Running actual Ollama HTTP inference smoke test" in script
+    assert "http://ollama:11434/api/generate" in script
+    assert '"stream": False' in script
+    assert "urllib.request.urlopen(request, timeout=180)" in script
+    assert "result.get(\"done\")" in script
+    assert "exec -T purra python -" in script
+    assert "if ($LASTEXITCODE -ne 0)" in script
+    assert "ollama run $Model" not in script
