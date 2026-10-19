@@ -50,3 +50,14 @@ def test_wordpress_probes_ignore_compose_status_stderr_and_check_exit_status():
     assert "return ($LASTEXITCODE -eq 0)" in script
     assert "Test-WP $service @('core', 'version')" in script
     assert "Test-WP $service @('core', 'is-installed')" in script
+
+
+def test_fresh_lab_admin_credentials_are_generated_without_interactive_prompt():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "RandomNumberGenerator]::Create()" in script
+    assert "$adminPassword | & docker.exe compose" in script
+    assert "--prompt=admin_password" in script
+    assert "run --rm -T $service wp core install" in script
+    assert "Password: $adminPassword" in script
+    assert "if (-not (Test-WP $service @('core', 'is-installed')))" in script
+    assert "Enter a local lab admin password when prompted" not in script
