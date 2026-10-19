@@ -105,6 +105,20 @@
       '<tr><td class="purr-item-name">' + esc(key.replaceAll('_',' ')) + '</td><td>' +
       esc(date(value.last_success)) + '</td><td class="purr-monovalue">' +
       esc(value.failures ?? 0) + '</td></tr>').join('');
+    const connection = data.connection || {};
+    const existingEndpoint = document.getElementById('purr-api-endpoint');
+    const unsavedEndpoint = existingEndpoint && existingEndpoint.value !== (connection.api_endpoint || '')
+      ? existingEndpoint.value : null;
+    const connectionCard = '<h3 class="purr-section-title">Purr Connection</h3>' +
+      '<div class="purr-card" style="padding:20px">' +
+      '<p><strong>Pairing status:</strong> <span class="purr-status is-unknown">Not paired</span></p>' +
+      '<label for="purr-assistant-id"><strong>Assistant ID · UUIDv7</strong></label>' +
+      '<input id="purr-assistant-id" class="regular-text code" type="text" readonly aria-readonly="true" value="' + esc(connection.assistant_id || 'Identity unavailable') + '" style="display:block;max-width:100%;width:440px;margin:8px 0 18px" />' +
+      '<label for="purr-api-endpoint"><strong>Central Purr API endpoint</strong></label>' +
+      '<input id="purr-api-endpoint" class="regular-text" type="url" inputmode="url" placeholder="https://purr.example.com" value="' + esc(unsavedEndpoint === null ? connection.api_endpoint || '' : unsavedEndpoint) + '" style="display:block;max-width:100%;width:440px;margin:8px 0" />' +
+      '<p class="description">Stored for future authenticated API pairing. Saving does not connect the plugin.</p>' +
+      '<div class="purr-actions"><button type="button" class="purr-action is-primary" id="purr-save-endpoint">Save endpoint</button>' +
+      '<button type="button" class="purr-action" disabled title="Pairing backend is not implemented">Pair with Purr (coming soon)</button></div></div>';
     els.settings.innerHTML = head('Settings & Diagnostics',
       'Local plugin information and independent AI network health checks',
       '<div class="purr-actions"><button type="button" class="purr-action is-primary" data-operation="health_check">Run Health Check</button>' +
@@ -113,6 +127,7 @@
       '<div class="purr-stat-value">' + esc(data.plugin_version || 'Unknown') + '</div></div>' +
       '<div class="purr-stat"><div class="purr-stat-label">Last network check</div>' +
       '<div class="purr-stat-value" style="font-size:16px">' + esc(date(network.checked_at)) + '</div></div></div>' +
+      connectionCard +
       '<h3 class="purr-section-title">AI Network Health</h3><div class="purr-health-grid">' + healthCards + '</div>' +
       '<h3 class="purr-section-title">Heartbeat history</h3>' +
       card('Scheduled components', hbRows ? table(['Component','Last success','Failures'],hbRows) :
@@ -185,6 +200,30 @@
   document.addEventListener('click', event => {
     const btn = event.target.closest('[data-operation]');
     if (btn) return void operate(btn.dataset.operation,btn);
+    if (event.target.closest('#purr-save-endpoint')) {
+      const field = document.getElementById('purr-api-endpoint');
+      const button = document.getElementById('purr-save-endpoint');
+      if (!field || !button || busy) return;
+      busy = true; button.disabled = true;
+      feedback.classList.remove('is-error');
+      feedback.textContent = 'Saving connection settings…';
+      const body = new URLSearchParams({
+        action: 'purr_child_save_connection', nonce: cfg.nonce,
+        api_endpoint: field.value.trim()
+      });
+      fetch(cfg.endpoint, {method:'POST', credentials:'same-origin', body}).then(async response => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(
+          typeof result.data === 'string' ? result.data : 'Failed to save connection settings');
+        data.connection = result.data;
+        draw();
+        feedback.textContent = 'API endpoint saved. Assistant is not paired yet.';
+      }).catch(error => {
+        feedback.classList.add('is-error');
+        feedback.textContent = error.message;
+      }).finally(() => { busy = false; if (button.isConnected) button.disabled = false; });
+      return;
+    }
     if (event.target.closest('#purr-copy-diagnostics')) {
       const report = JSON.stringify({
         plugin_version:data.plugin_version,bootstrap_checksum:data.bootstrap_checksum,
