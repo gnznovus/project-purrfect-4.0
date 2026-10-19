@@ -39,3 +39,7 @@ async def test_ollama_adapter(monkeypatch):
     output = await OllamaModel(timeout=1.0).complete("system", "user")
     assert output == '{"objective_id":"translate"}'
     assert fake.payload["messages"][0]["role"] == "system"
+    assert fake.payload["keep_alive"] == "30m"
+    assert fake.payload["options"]["num_predict"] == 160
+    assert fake.payload["options"]["num_ctx"] == 2048
+    assert isinstance(output.metrics, dict)
