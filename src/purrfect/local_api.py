@@ -13,7 +13,7 @@ from purrfect.brain_scope import select_scope
 from purrfect.ollama import OllamaModel
 from purrfect.conversation import Conversation
 from purrfect import troubleshooting as troubleshoot
-from purrfect.conversation_intent import heuristic, classify_move
+from purrfect.conversation_intent import heuristic, classify_move, draft_welcome
 from purrfect.discovery import discover
 from purrfect.knowledge import EVERYDAY_WORDPRESS, SiteKnowledge
 from purrfect.guidance import GuidanceResponse, InputKind, Interaction, Option
@@ -280,6 +280,24 @@ def respond(payload: dict, state: LocalState) -> dict:
         def conversation_answer(default, status="grounded"):
             wording = move.reply if move is not None and move.reply else default
             return _reply(GuidanceResponse(wording, status), "conversation")
+
+        def dynamic_welcome(with_options=False):
+            if state.model is None:
+                return None
+            available = ({p.id: p.id for p in knowledge.products.values()}
+                         | {"wordpress": "General WordPress", "other": "Other"}) if with_options else {}
+            try:
+                draft = asyncio.run(draft_welcome(state.model, message, available))
+            except Exception:
+                return None
+            if draft is None:
+                return None
+            wording, selected = draft
+            interaction = (Interaction(InputKind.SINGLE_SELECT, "support_scope",
+                           tuple(Option(identifier, label) for identifier, label in selected))
+                           if selected else None)
+            return _reply(GuidanceResponse(wording, "needs_input" if interaction else "grounded",
+                                           interaction), "conversation")
         if greeting or pleasantry:
             if kind in ("new", "clarify"):
                 kind = "social"
@@ -287,8 +305,14 @@ def respond(payload: dict, state: LocalState) -> dict:
                 response = ("Hi! I'm here if you need help with WordPress or your registered products."
                             if greeting else
                             "Of course! What would you like help with?")
+                drafted = dynamic_welcome(with_options=True)
+                if drafted is not None:
+                    return finish(drafted, conversation.updated(topic=message, pending=bool(drafted["interaction"])))
                 return finish(conversation_answer(response), conversation)
         if kind == "social":
+            drafted = dynamic_welcome(with_options=True)
+            if drafted is not None:
+                return finish(drafted, conversation.updated(topic=message, pending=bool(drafted["interaction"])))
             return finish(conversation_answer("Of course! What would you like help with?"),
                           conversation)
         if kind == "resolved":
@@ -336,6 +360,11 @@ def respond(payload: dict, state: LocalState) -> dict:
         # of allowing a small classifier to label it unrelated.
         if generic_help:
             candidate = conversation.updated(topic=message, scope=None, pending=True)
+            drafted = dynamic_welcome(with_options=True)
+            if drafted is not None:
+                # No options means an open-ended follow-up, rather than an
+                # invalid selection. The user can always type freely.
+                return finish(drafted, candidate.updated(pending=bool(drafted["interaction"])))
             return finish(_clarify(knowledge), candidate)
 
         # Explicit corrections override the previous scope, rather than carrying
