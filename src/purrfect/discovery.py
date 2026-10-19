@@ -57,15 +57,18 @@ def discover(snapshot: dict) -> DiscoveryResult:
                 raise ValueError("Invalid capability")
             evidence = []
             for entry in records:
-                if not isinstance(entry, dict) or set(entry) != {
-                    "id", "title", "text", "source", "tags",
-                } or not isinstance(entry["tags"], list) or any(
+                if not isinstance(entry, dict) or not {"id", "title", "text", "source", "tags"} <= set(entry)
+                    or set(entry) - {"id", "title", "text", "source", "tags", "parent_id", "child_ids", "navigation"} or not isinstance(entry["tags"], list) or any(
                     not isinstance(tag, str) for tag in entry["tags"]
                 ):
                     raise ValueError("Invalid evidence")
+                if not isinstance(entry.get("child_ids", []), list):
+                    raise ValueError("Invalid graph children")
                 evidence.append(Evidence(
                     entry["id"], entry["title"], entry["text"], entry["source"],
                     pid, version, tuple(entry["tags"]),
+                    entry.get("parent_id"), tuple(entry.get("child_ids", [])),
+                    entry.get("navigation"),
                 ))
             if len({item.id for item in evidence}) != len(evidence):
                 raise ValueError("Duplicate evidence IDs")
