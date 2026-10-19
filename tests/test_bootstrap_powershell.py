@@ -28,3 +28,12 @@ def test_missing_ollama_model_is_pulled_without_failing_show():
     assert "if (-not $modelFound)" in script
     assert "ollama pull $Model" in script
     assert "if (-not $pulled)" in script
+
+
+def test_inference_smoke_test_reports_progress_and_timeout():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "Start-Process -FilePath 'docker.exe'" in script
+    assert "Ollama still generating" in script
+    assert "inferenceTimeoutSeconds = 600" in script
+    assert "Stop-Process -Id $inferenceProcess.Id" in script
+    assert "Remove-Item $inferenceOut, $inferenceErr" in script
