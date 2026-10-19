@@ -300,3 +300,42 @@ def test_generic_help_variants_do_not_classify_as_outside_support():
         assert reply["status"] == "needs_input"
         assert reply["interaction"]["key"] == "support_scope"
         assert "mock-layout" in {o["id"] for o in reply["interaction"]["options"]}
+
+
+def test_dynamic_help_generates_validated_scope_buttons():
+    class WelcomeBrain:
+        async def complete(self, system, user):
+            if "Reply ONLY with JSON keys" in system:
+                return '{"response":"I can help! Which area is causing trouble?","options":[{"id":"mock-layout","label":"Layout help"},{"id":"wordpress","label":"WordPress basics"}]}'
+            return '{"kind":"new","reply":null}'
+    state = LocalState(model=WelcomeBrain())
+    answer = respond(request("dynamic-help", "I need help"), state)
+    assert answer["message"] == "I can help! Which area is causing trouble?"
+    assert answer["interaction"]["options"] == [
+        {"id": "mock-layout", "label": "Layout help"},
+        {"id": "wordpress", "label": "WordPress basics"},
+    ]
+    assert answer["context"]["pending"] is True
+    selected = respond(request("dynamic-help", "", "mock-layout"), state)
+    assert selected["interaction"]["key"] == "support_intent"
+
+
+def test_dynamic_options_cannot_invent_registered_product():
+    class InventingBrain:
+        async def complete(self, system, user):
+            return '{"response":"Choose a tool.","options":[{"id":"unregistered-plugin","label":"Magic tool"}]}'
+    result = respond(request("invented-choice", "I need help"), LocalState(model=InventingBrain()))
+    assert result["status"] == "needs_input"
+    assert {item["id"] for item in result["interaction"]["options"]} == {"mock-layout", "wordpress", "other"}
+
+
+def test_dynamic_small_talk_without_options():
+    class NiceBrain:
+        async def complete(self, system, user):
+            if "Reply ONLY with JSON keys" in system:
+                return '{"response":"Doing well, thanks for asking! What is on your mind?","options":[]}'
+            return '{"kind":"social","reply":"How can I help?"}'
+    answer = respond(request("social-turn", "how are you today?"), LocalState(model=NiceBrain()))
+    assert answer["message"] == "Doing well, thanks for asking! What is on your mind?"
+    assert answer["interaction"] is None
+    assert answer["scope"] == "conversation"
