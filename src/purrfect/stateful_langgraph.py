@@ -132,7 +132,7 @@ def _validate_intent(state: IntentState) -> dict:
         return {"decision": None}
     if not isinstance(response, str) or not 2 <= len(response) <= 260:
         return {"decision": None}
-    if re.search(r"[\\r\\n`{}<>]|https?://|www\\.|\\b(?:install|delete|execute|publish|approve|upload|download|activate|deactivate|command)\\b",
+    if re.search(r"[\r\n`{}<>]|https?://|www\.|\b(?:install|delete|execute|publish|approve|upload|download|activate|deactivate|command)\b",
                  response, re.I):
         return {"decision": None}
     if not isinstance(options, list) or len(options) > 4:
@@ -144,7 +144,7 @@ def _validate_intent(state: IntentState) -> dict:
         oid, label = option["id"], option["label"]
         if (not isinstance(oid, str) or oid not in catalog or oid in seen
                 or not isinstance(label, str) or not 1 <= len(label) <= 45
-                or re.search(r"[\\r\\n`{}<>]|https?://", label, re.I)):
+                or re.search(r"[\r\n`{}<>]|https?://", label, re.I)):
             return {"decision": None}
         seen.add(oid)
         validated.append({"id": oid, "label": label})
