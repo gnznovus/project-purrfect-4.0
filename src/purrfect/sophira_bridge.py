@@ -71,7 +71,10 @@ def effective_knowledge(knowledge: SiteKnowledge, raw: object) -> SiteKnowledge:
             previous = existing.get(item.id)
             existing[item.id] = Evidence(item.id, previous.title if previous else item.id,
                                          item.content, versioned_source(item.source, product.version, item.entry_revision), product.id, product.version,
-                                         previous.tags if previous else ())
+                                         previous.tags if previous else (),
+                                         previous.parent_id if previous else None,
+                                         previous.child_ids if previous else (),
+                                         previous.navigation if previous else None)
         products.append(replace(product, evidence=tuple(existing.values())))
     return SiteKnowledge(products, knowledge.wordpress)
 
