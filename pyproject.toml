@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Reusable AI intelligence foundation and product-specialized assistants"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["httpx>=0.27,<1"]
+dependencies = ["httpx>=0.27,<1", "fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "langgraph>=1,<2", "langgraph-checkpoint-sqlite>=3,<4"]
