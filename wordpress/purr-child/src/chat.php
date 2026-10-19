@@ -65,11 +65,24 @@ add_action('admin_footer', static function (): void {
 add_action('admin_enqueue_scripts', static function (): void {
     if (!current_user_can('manage_options')) return;
     wp_enqueue_style('purr-child-widget', plugins_url('../assets/widget.css', __FILE__), [], '0.1.3');
-    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.9', true);
+    wp_enqueue_script('purr-child-widget', plugins_url('../assets/widget.js', __FILE__), [], '0.1.10', true);
     wp_add_inline_script('purr-child-widget', 'window.purrChildWidget = ' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('purr_child_lab'),
         'scope' => get_current_blog_id() . ':' . get_current_user_id(),
         'purraAvatar' => plugins_url('../assets/purra-avatar.png', __FILE__),
+        // Target locations come from the active product, never from the model.
+        'guidanceTargets' => array_values(array_filter(
+            apply_filters('purrfect/guidance_targets', []),
+            static function ($target): bool {
+                return is_array($target)
+                    && isset($target['id'], $target['label'], $target['url'], $target['element_id'], $target['keywords'])
+                    && is_string($target['id']) && preg_match('/\A[a-z0-9:_-]{1,100}\z/', $target['id'])
+                    && is_string($target['label']) && is_string($target['url'])
+                    && is_string($target['element_id']) && preg_match('/\A[a-zA-Z][a-zA-Z0-9_-]{0,99}\z/', $target['element_id'])
+                    && is_array($target['keywords'])
+                    && str_starts_with($target['url'], admin_url('admin.php?'));
+            }
+        )),
     ]) . ';', 'before');
 });
