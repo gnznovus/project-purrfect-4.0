@@ -8,6 +8,12 @@
 
 defined('ABSPATH') || exit;
 
+if (!defined('PURR_ASSISTANT_SERVICE_URL')) {
+    // Docker-lab default. Other WordPress installs should override in wp-config.php.
+    define('PURR_ASSISTANT_SERVICE_URL', 'http://purra:8765');
+}
+
+
 require_once __DIR__ . '/src/discovery.php';
 require_once __DIR__ . '/src/heartbeat.php';
 require_once __DIR__ . '/src/runner.php';
