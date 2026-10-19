@@ -72,7 +72,8 @@
     if (entry.role === 'Purr' || entry.role === 'Purra') line.append(avatar());
     const bubble = element('div', 'pc-bubble');
     bubble.append(element('p', 'pc-item' + (entry.role === 'You' ? ' pc-user' : ''), entry.text));
-    if (entry.options && Array.isArray(entry.options) && !entry.consumed) {
+    if (entry.options && Array.isArray(entry.options) && !entry.consumed
+        && pending && pending.turn === entry.turn) {
       const choices = element('div', 'pc-actions');
       for (const option of entry.options) {
         if (typeof option.id !== 'string' || typeof option.label !== 'string') continue;
@@ -133,7 +134,14 @@
     if (busy) return;
     busy = true; send.disabled = true;
     const previousPending = pending;
-    pending = null; renderAll(); save();
+    pending = null;
+    // Any new turn supersedes previous suggestions. Hide them, don't leave
+    // a trail of disabled buttons in conversation history.
+    if (previousPending) {
+      const previousEntry = history.find(entry => entry.turn === previousPending.turn);
+      if (previousEntry) { previousEntry.consumed = true; delete previousEntry.options; }
+    }
+    renderAll(); save();
     const started = performance.now();
     const update = () => {
       const seconds = Math.floor((performance.now() - started) / 1000);
@@ -171,8 +179,12 @@
       renderAll(); save();
     } catch (error) {
       remember('Connection', error.message);
-      // A failed request must not silently invalidate an existing choice.
-      if (selection !== null) pending = previousPending;
+      // A failed selection can be retried; restore its buttons as well.
+      if (selection !== null && previousPending) {
+        pending = previousPending;
+        const previousEntry = history.find(entry => entry.turn === previousPending.turn);
+        if (previousEntry) previousEntry.consumed = false;
+      }
       renderAll(); save();
     }
     finally { clearInterval(tick); status.hidden = true; status.textContent = '';
