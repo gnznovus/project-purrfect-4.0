@@ -449,6 +449,13 @@ def respond(payload: dict, state: LocalState) -> dict:
                 answer["message"] = "The local Brain is unavailable. Please choose a supported area below."
                 answer["routing"] = "brain-unavailable"
                 return finish(answer, candidate.updated(pending=True))
+            if decision == "other":
+                # A model's scope guess is not a user-confirmed rejection.
+                # Only an explicit selection of Other enters the unsupported contract.
+                answer = _clarify(knowledge)
+                answer["message"] = "Could you tell me a little more about what you're trying to do?"
+                answer["routing"] = "brain-clarify"
+                return finish(answer, candidate.updated(pending=True))
             if decision is not None:
                 answer = _choose(topic, decision, knowledge)
                 if answer["status"] in ("grounded", "unsupported", "needs_input"):
