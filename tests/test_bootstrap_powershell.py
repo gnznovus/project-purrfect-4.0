@@ -35,5 +35,7 @@ def test_inference_smoke_test_reports_progress_and_timeout():
     assert "Start-Process -FilePath 'docker.exe'" in script
     assert "Ollama still generating" in script
     assert "inferenceTimeoutSeconds = 600" in script
+    assert "if ($null -eq $inferenceProcess)" in script
+    assert "$inferenceProcess.WaitForExit(2000)" in script
     assert "Stop-Process -Id $inferenceProcess.Id" in script
     assert "Remove-Item $inferenceOut, $inferenceErr" in script
