@@ -381,3 +381,26 @@ def test_social_and_generic_help_use_one_model_call_each():
         assert len(brain.calls) == 1
         assert brain.calls[0][1]["temperature"] == 0.65
         assert answer["message"].startswith("Happy to help")
+
+
+def test_purr_personality_is_shared_by_social_drafting_and_move_classification():
+    from purrfect.conversation_intent import PURR_VOICE, classify_move, draft_welcome
+    import asyncio
+
+    class CapturingModel:
+        def __init__(self, response):
+            self.prompts = []
+            self.response = response
+
+        async def complete(self, system, user, **kwargs):
+            self.prompts.append(system)
+            return self.response
+
+    social = CapturingModel('{"response":"Hey there! What is on your mind?","options":[]}')
+    assert asyncio.run(draft_welcome(social, "Hi!", {})) is not None
+    classifier = CapturingModel('{"kind":"social","reply":"Glad you stopped by!"}')
+    assert asyncio.run(classify_move(classifier, "Thanks!", {})).kind == "social"
+    assert "thoughtful big sister" in PURR_VOICE
+    assert "functioning within normal parameters" in PURR_VOICE
+    assert all("thoughtful big sister" in prompt for prompt in social.prompts + classifier.prompts)
+    assert "empty options array" in social.prompts[0]
