@@ -151,9 +151,12 @@ print(f"Ollama HTTP inference passed in {time.monotonic() - started:.1f}s; respo
     PrepareSite 'cli' 'http://localhost:8084' 'Purrfect Lab A'
     if ($SiteB) { PrepareSite 'cli_b' 'http://localhost:8083' 'Purrfect Lab B' }
 
-    Step 'Waiting for registry and knowledge heartbeat'
-    # The existing independent minute clock owns heartbeat scheduling.
-    Start-Sleep -Seconds 65
+    # Run one real heartbeat now rather than waiting for the clock's minute boundary.
+    # This invokes the same entrypoint as the recurring clock; it does not bypass
+    # the heartbeat contract or alter its normal schedule.
+    Step 'Triggering immediate registry and knowledge heartbeat'
+    Compose exec -T clock php /opt/purr-child-heartbeat.php
+    if ($SiteB) { Compose exec -T clock_b php /opt/purr-child-heartbeat.php }
     Step 'Verifying initialized registry'
     WP 'cli' @('option', 'get', 'purr_child_registry', '--format=json')
     if ($SiteB) { WP 'cli_b' @('option', 'get', 'purr_child_registry', '--format=json') }
