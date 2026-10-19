@@ -280,6 +280,8 @@ def respond(payload: dict, state: LocalState) -> dict:
                     answer["routing"] = "unified-intent"
                     return finish(answer, conversation.updated(topic=message, scope=target,
                         pending=answer["status"] == "needs_input"))
+                if intent == "unresolved" and workflow is not None and workflow.status == "awaiting_result":
+                    return workflow_response("failed")
                 if intent == "unresolved":
                     answer = _reply(GuidanceResponse(meaning["response"], "clarification"), "conversation")
                     answer["routing"] = "unified-intent"
@@ -288,7 +290,7 @@ def respond(payload: dict, state: LocalState) -> dict:
                 if intent == "followup" and conversation.topic:
                     # Preserve the existing evidence-bound followup implementation.
                     pass
-                lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
+        lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
         # The model is the first gate for conversational language. Product
         # evidence and interactive selections continue through fixed contracts.
         greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
