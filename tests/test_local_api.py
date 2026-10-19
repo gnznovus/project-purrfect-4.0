@@ -449,3 +449,28 @@ def test_unified_intent_handles_failed_step_without_marking_success():
     output = respond(request("broken", "it stil dosnt work"), LocalState(model=FailureBrain()))
     assert output["routing"] == "unified-intent"
     assert output["context"]["outcome"] == "unresolved"
+
+
+def test_debug_trace_opt_in_and_no_model_text_leak():
+    class TinyBrain:
+        async def complete(self, system, user, **kwargs):
+            return '{"intent":"social","target":null,"response":"Hey there!","options":[]}'
+    state = LocalState(model=TinyBrain())
+    quiet = respond(request("quiet-debug", "hi"), state)
+    assert "debug" not in quiet
+    traced = respond(request("trace-debug", "Hii Purrr!!") | {"debug": True}, state)
+    assert traced["routing"] == "unified-intent"
+    assert traced["debug"]["duration_ms"] >= 0
+    assert [step["stage"] for step in traced["debug"]["stages"]] == [
+        "Ollama", "Validation", "Unified decision", "Final route"]
+    assert not any("Hey there!" in str(step) for step in traced["debug"]["stages"])
+    assert "debug" not in traced["context"]
+
+
+def test_debug_flag_requires_boolean():
+    try:
+        respond(request("bad-debug", "Hi!") | {"debug": "yes"}, LocalState())
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Non-boolean debug flag accepted")
