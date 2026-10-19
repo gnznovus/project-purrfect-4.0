@@ -73,8 +73,16 @@ try {
     }
     if (-not $ollamaReady) { throw 'Ollama service did not become ready.' }
     Step "Checking required Ollama model $Model"
-    & docker.exe compose @composeArgs exec -T ollama ollama show $Model *> $null
-    if ($LASTEXITCODE -ne 0) {
+    # 'ollama show' exits with an expected stderr error for an absent model.
+    # Under PowerShell's Stop preference that stderr can abort the bootstrap
+    # before the automatic pull. A successful 'list' avoids that control-flow trap.
+    $installedModels = @(& docker.exe compose @composeArgs exec -T ollama ollama list)
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to list installed Ollama models.' }
+    $modelFound = @($installedModels | Where-Object {
+        $columns = $_.Trim() -split '\s+'
+        $columns[0] -ceq $Model
+    }).Count -gt 0
+    if (-not $modelFound) {
         Step "Downloading Ollama model $Model (preserved in its Docker volume)"
         $pulled = $false
         for ($attempt = 1; $attempt -le 3; $attempt++) {
