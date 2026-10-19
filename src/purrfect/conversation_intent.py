@@ -114,7 +114,7 @@ async def draft_welcome(model, message: str, available: dict[str, str]):
         if (not isinstance(identifier, str) or identifier not in available
                 or identifier in seen or not isinstance(label, str)
                 or not 1 <= len(label) <= 45
-                or re.search(r"[\r\n`{}<>]|https?://", label, re.I)):
+                or re.search(r"[\r\n`{}<>]|https?://|\\b(?:delete|install|run|execute|publish|approve|upload|download|activate|deactivate)\\b", label, re.I)):
             return None
         seen.add(identifier)
         safe.append((identifier, label))
