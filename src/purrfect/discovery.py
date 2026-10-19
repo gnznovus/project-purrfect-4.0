@@ -57,9 +57,12 @@ def discover(snapshot: dict) -> DiscoveryResult:
                 raise ValueError("Invalid capability")
             evidence = []
             for entry in records:
-                if not isinstance(entry, dict) or not {"id", "title", "text", "source", "tags"} <= set(entry)
-                    or set(entry) - {"id", "title", "text", "source", "tags", "parent_id", "child_ids", "navigation"} or not isinstance(entry["tags"], list) or any(
-                    not isinstance(tag, str) for tag in entry["tags"]
+                if (
+                    not isinstance(entry, dict)
+                    or not {"id", "title", "text", "source", "tags"} <= set(entry)
+                    or bool(set(entry) - {"id", "title", "text", "source", "tags", "parent_id", "child_ids", "navigation"})
+                    or not isinstance(entry["tags"], list)
+                    or any(not isinstance(tag, str) for tag in entry["tags"])
                 ):
                     raise ValueError("Invalid evidence")
                 if not isinstance(entry.get("child_ids", []), list):
