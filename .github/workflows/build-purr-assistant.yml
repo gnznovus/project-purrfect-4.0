@@ -1,0 +1,40 @@
+name: Build PurrAssistant ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/layout-engine-whoosh
+    paths:
+      - 'wordpress/purr-child/**'
+      - '.github/workflows/build-purr-assistant.yml'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP syntax
+        run: |
+          set -euo pipefail
+          find wordpress/purr-child -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate JavaScript syntax
+        run: |
+          set -euo pipefail
+          find wordpress/purr-child -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Package installable WordPress plugin
+        run: |
+          set -euo pipefail
+          mkdir -p dist/PurrAssistant
+          cp -a wordpress/purr-child/. dist/PurrAssistant/
+          cd dist
+          zip -qr PurrAssistant.zip PurrAssistant
+          unzip -t PurrAssistant.zip
+          test "$(unzip -Z1 PurrAssistant.zip | grep -c '^PurrAssistant/purr-child.php$')" -eq 1
+      - name: Upload PurrAssistant.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: PurrAssistant
+          path: dist/PurrAssistant.zip
+          if-no-files-found: error
+          retention-days: 30
