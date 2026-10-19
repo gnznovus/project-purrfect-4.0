@@ -8,6 +8,7 @@
 
 defined('ABSPATH') || exit;
 
+require_once __DIR__ . '/src/connection.php';
 require_once __DIR__ . '/src/discovery.php';
 require_once __DIR__ . '/src/heartbeat.php';
 require_once __DIR__ . '/src/runner.php';
