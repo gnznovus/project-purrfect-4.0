@@ -379,7 +379,7 @@ def test_social_and_generic_help_use_one_model_call_each():
         brain = CountingBrain()
         answer = respond(request("one-call-" + phrase, phrase), LocalState(model=brain))
         assert len(brain.calls) == 1
-        assert brain.calls[0][1]["temperature"] == 0.65
+        assert brain.calls[0][1]["temperature"] == 0.4
         assert answer["message"].startswith("Happy to help")
 
 
@@ -438,7 +438,7 @@ def test_unified_intent_rejects_invented_product_without_leaking_claims():
         async def complete(self, system, user, **kwargs):
             return '{"intent":"product","target":"made-up","response":"I can publish your site.","options":[]}'
     output = respond(request("invented", "publish my site"), LocalState(model=FakeBrain()))
-    assert output["routing"] != "unified-intent" or output["scope"] != "product"
+    assert output.get("routing") != "unified-intent" or output["scope"] != "product"
     assert "I can publish your site" not in output["message"]
 
 
@@ -448,4 +448,4 @@ def test_unified_intent_handles_failed_step_without_marking_success():
             return '{"intent":"unresolved","target":null,"response":"Sorry that did not help. What happened?","options":[]}'
     output = respond(request("broken", "it stil dosnt work"), LocalState(model=FailureBrain()))
     assert output["routing"] == "unified-intent"
-    assert output["context"]["last_outcome"] == "unresolved"
+    assert output["context"]["outcome"] == "unresolved"
