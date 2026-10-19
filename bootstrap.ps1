@@ -92,10 +92,43 @@ try {
         }
         if (-not $pulled) { throw 'Ollama model download failed after 3 attempts. Rerun bootstrap to resume.' }
     }
-    Step 'Running actual Ollama inference smoke test'
-    $reply = & docker.exe compose @composeArgs exec -T ollama ollama run $Model 'Reply with the single word READY.'
-    if ($LASTEXITCODE -ne 0 -or -not (($reply | Out-String).Trim())) {
-        throw 'Ollama inference failed. The lab was not declared ready.'
+    Step "Running actual Ollama inference smoke test ($Model)"
+    # A first CPU inference can take minutes, and captured stdout otherwise looks frozen.
+    # Launch Docker as a monitored process so progress remains visible while preserving
+    # its response for validation. Store temporary output inside this repository only.
+    $inferenceOut = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.out"
+    $inferenceErr = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.err"
+    $inferenceArgs = @($composeArgs) + @('exec', '-T', 'ollama', 'ollama', 'run', $Model, 'Reply with the single word READY.')
+    $inferenceCommandLine = ($inferenceArgs | ForEach-Object {
+        if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\\"') + '"' } else { $_ }
+    }) -join ' '
+    $inferenceTimeoutSeconds = 600
+    $inferenceClock = [System.Diagnostics.Stopwatch]::StartNew()
+    $inferenceProcess = $null
+    try {
+        Step "Inference running; reporting every 10 seconds (timeout: $inferenceTimeoutSeconds seconds)"
+        $inferenceProcess = Start-Process -FilePath 'docker.exe' -ArgumentList $inferenceCommandLine -NoNewWindow -PassThru -RedirectStandardOutput $inferenceOut -RedirectStandardError $inferenceErr
+        while (-not $inferenceProcess.HasExited) {
+            Start-Sleep -Seconds 2
+            $inferenceProcess.Refresh()
+            $elapsed = [int]$inferenceClock.Elapsed.TotalSeconds
+            if ($elapsed -ge $inferenceTimeoutSeconds) {
+                Stop-Process -Id $inferenceProcess.Id -Force -ErrorAction SilentlyContinue
+                throw "Ollama inference timed out after $elapsed seconds. Check available CPU/RAM and Ollama logs."
+            }
+            if ($elapsed -ge 10 -and $elapsed % 10 -lt 2) {
+                Step "Ollama still generating... ${elapsed}s elapsed"
+            }
+        }
+        $inferenceClock.Stop()
+        $reply = if (Test-Path $inferenceOut) { (Get-Content $inferenceOut -Raw).Trim() } else { '' }
+        if ($inferenceProcess.ExitCode -ne 0 -or -not $reply) {
+            $diagnostic = if (Test-Path $inferenceErr) { (Get-Content $inferenceErr -Raw).Trim() } else { '' }
+            throw "Ollama inference failed (exit $($inferenceProcess.ExitCode)): $diagnostic"
+        }
+        Step "Ollama inference passed in $([int]$inferenceClock.Elapsed.TotalSeconds)s; received response: $reply"
+    } finally {
+        Remove-Item $inferenceOut, $inferenceErr -Force -ErrorAction SilentlyContinue
     }
 
     Step 'Initializing Sophia demo knowledge only if its catalog is empty'
