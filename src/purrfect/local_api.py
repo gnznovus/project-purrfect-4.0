@@ -244,7 +244,9 @@ def respond(payload: dict, state: LocalState) -> dict:
         # evidence and interactive selections continue through fixed contracts.
         greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
         pleasantry = lowered in ("can i ask something else", "can i ask another question",
-                                 "thank you", "thanks")
+                                 "thank you", "thanks", "how are you",
+                                 "how are you today", "how is your day",
+                                 "good morning", "good evening")
         fallback = heuristic(message)
         correction_text = any(word in lowered for word in
                               ("i meant", "instead", "switch to", "rather than"))
