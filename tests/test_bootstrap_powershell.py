@@ -69,3 +69,12 @@ def test_bootstrap_triggers_real_heartbeat_without_fixed_minute_sleep():
     assert "Compose exec -T clock_b php /opt/purr-child-heartbeat.php" in script
     assert "Start-Sleep -Seconds 65" not in script
     assert "WP 'cli' @('option', 'get', 'purr_child_registry', '--format=json')" in script
+
+
+def test_new_credentials_are_repeated_after_success_not_saved_to_disk():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "$script:newLabCredentials = @()" in script
+    assert "$script:newLabCredentials += [pscustomobject]" in script
+    assert "New WordPress lab credentials (save now):" in script
+    assert "foreach ($credential in $script:newLabCredentials)" in script
+    assert "No new accounts created. Existing passwords are preserved" in script
