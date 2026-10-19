@@ -250,7 +250,11 @@ def respond(payload: dict, state: LocalState) -> dict:
         fallback = heuristic(message)
         correction_text = any(word in lowered for word in
                               ("i meant", "instead", "switch to", "rather than"))
-        generic_help = _is_generic_help(message)
+        generic_help = (_is_generic_help(message) or bool(re.fullmatch(
+            r"(?:i (?:dont|do not) know (?:where|how) to start|"
+            r"(?:im|i am) (?:lost|confused)|"
+            r"(?:not sure|no idea) (?:where|how) to start|"
+            r"what (?:can|should) i do)", lowered)))
         # Avoid a second model call for full product questions; the existing
         # scoped router handles them. Short ambiguous turns belong to dialogue.
         conversational = (greeting or pleasantry or fallback is not None
@@ -307,16 +311,16 @@ def respond(payload: dict, state: LocalState) -> dict:
                 response = ("Hi! I'm here if you need help with WordPress or your registered products."
                             if greeting else
                             "Of course! What would you like help with?")
-                drafted = dynamic_welcome(with_options=True)
+                drafted = dynamic_welcome(with_options=False)
                 if drafted is not None:
-                    return finish(drafted, conversation.updated(topic=message, pending=bool(drafted["interaction"])))
-                return finish(conversation_answer(response), conversation)
+                    return finish(drafted, conversation.updated(pending=False))
+                return finish(conversation_answer(response), conversation.updated(pending=False))
         if kind == "social":
-            drafted = dynamic_welcome(with_options=True)
+            drafted = dynamic_welcome(with_options=False)
             if drafted is not None:
-                return finish(drafted, conversation.updated(topic=message, pending=bool(drafted["interaction"])))
+                return finish(drafted, conversation.updated(pending=False))
             return finish(conversation_answer("Of course! What would you like help with?"),
-                          conversation)
+                          conversation.updated(pending=False))
         if kind == "resolved":
             if not conversation.evidence_id:
                 return finish(conversation_answer(
@@ -352,12 +356,6 @@ def respond(payload: dict, state: LocalState) -> dict:
             return finish(_reply(GuidanceResponse(response, "clarification"), "conversation"),
                 conversation.updated(topic=conversation.topic, scope=conversation.scope,
                     outcome=conversation.outcome, evidence_id=conversation.evidence_id))
-        if kind == "clarify" and conversation.topic and conversational:
-            return finish(conversation_answer(
-                "Could you tell me which part you mean?", "clarification"),
-                conversation.updated(topic=conversation.topic, scope=conversation.scope,
-                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
-
         # A general request for help has no product target yet. Ask instead
         # of allowing a small classifier to label it unrelated.
         if generic_help:
@@ -368,6 +366,12 @@ def respond(payload: dict, state: LocalState) -> dict:
                 # invalid selection. The user can always type freely.
                 return finish(drafted, candidate.updated(pending=bool(drafted["interaction"])))
             return finish(_clarify(knowledge), candidate)
+
+        if kind == "clarify" and conversation.topic and conversational:
+            return finish(conversation_answer(
+                "Could you tell me which part you mean?", "clarification"),
+                conversation.updated(topic=conversation.topic, scope=conversation.scope,
+                    outcome=conversation.outcome, evidence_id=conversation.evidence_id))
 
         # Explicit corrections override the previous scope, rather than carrying
         # old product-specific evidence into a newly chosen product.
