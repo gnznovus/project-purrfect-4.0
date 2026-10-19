@@ -13,10 +13,24 @@ class Evidence:
     product_id: str | None = None
     version: str | None = None
     tags: tuple[str, ...] = ()
+    parent_id: str | None = None
+    child_ids: tuple[str, ...] = ()
+    navigation: dict | None = None
 
     def __post_init__(self):
         if not all((self.id, self.title, self.text, self.source)):
             raise ValueError("Evidence must have an ID, title, text and source")
+        if self.parent_id is not None and (not isinstance(self.parent_id, str) or not self.parent_id or self.parent_id == self.id):
+            raise ValueError("Invalid evidence parent")
+        if not isinstance(self.child_ids, tuple) or any(not isinstance(x, str) or not x or x == self.id for x in self.child_ids) or len(self.child_ids) != len(set(self.child_ids)):
+            raise ValueError("Invalid evidence children")
+        if self.navigation is not None and (
+            not isinstance(self.navigation, dict)
+            or set(self.navigation) != {"target_id"}
+            or not isinstance(self.navigation["target_id"], str)
+            or not self.navigation["target_id"]
+        ):
+            raise ValueError("Invalid evidence navigation reference")
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +77,21 @@ class RegisteredProduct:
         if len({p.id for p in self.troubleshooting}) != len(self.troubleshooting):
             raise ValueError("Duplicate troubleshooting procedure IDs")
         evidence_ids = {item.id for item in self.evidence}
+        nodes = {item.id: item for item in self.evidence}
+        for item in self.evidence:
+            if item.parent_id is not None:
+                if item.parent_id not in nodes or item.id not in nodes[item.parent_id].child_ids:
+                    raise ValueError("Knowledge parent/child link mismatch")
+            for child in item.child_ids:
+                if child not in nodes or nodes[child].parent_id != item.id:
+                    raise ValueError("Knowledge child/parent link mismatch")
+            visited = set()
+            cursor = item
+            while cursor.parent_id is not None:
+                if cursor.id in visited:
+                    raise ValueError("Knowledge graph contains a parent cycle")
+                visited.add(cursor.id)
+                cursor = nodes[cursor.parent_id]
         if any(step.evidence_id not in evidence_ids
                for procedure in self.troubleshooting for step in procedure.steps):
             raise ValueError("Troubleshooting step must reference product evidence")
@@ -105,9 +134,23 @@ class SiteKnowledge:
             score = 5 * len(words & tags) + 3 * len(words & title) + len(words & body)
             if score:
                 results.append((score, record))
-        return tuple(item for _, item in sorted(
-            results, key=lambda pair: (-pair[0], pair[1].id),
-        )[:limit])
+        ranked = [item for _, item in sorted(results, key=lambda pair: (-pair[0], pair[1].id))]
+        if not ranked:
+            return ()
+        # Traverse immediate relations only, within the authorized product scope.
+        by_key = {(item.product_id, item.id): item for item in candidates}
+        selected = []
+        seen = set()
+        for seed in ranked:
+            relatives = ([seed.parent_id] if seed.parent_id else []) + list(seed.child_ids)
+            for node in [seed] + [by_key.get((seed.product_id, node_id)) for node_id in relatives]:
+                if node is None or (node.product_id, node.id) in seen:
+                    continue
+                selected.append(node)
+                seen.add((node.product_id, node.id))
+                if len(selected) >= limit:
+                    return tuple(selected)
+        return tuple(selected)
 
 
 _STOPWORDS = frozenset({
