@@ -257,7 +257,7 @@ function purr_child_sync_knowledge(): bool {
     if (!$products) {
         return true;
     }
-    $response = wp_remote_post('http://purra:8765/v1/knowledge/sync', [
+    $response = wp_remote_post(rtrim(PURR_ASSISTANT_SERVICE_URL, '/') . '/v1/knowledge/sync', [
         'timeout' => 20,
         'headers' => ['Content-Type' => 'application/json'],
         'body' => wp_json_encode(['products' => $products]),
