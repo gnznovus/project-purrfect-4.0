@@ -19,3 +19,12 @@ def test_bootstrap_invokes_explicit_docker_exe():
     script = BOOTSTRAP.read_text(encoding="utf-8-sig")
     assert not re.search(r"(?im)&\s+docker\s", script)
     assert script.count("& docker.exe") >= 2
+
+
+def test_missing_ollama_model_is_pulled_without_failing_show():
+    script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "ollama show $Model" not in script
+    assert "ollama list)" in script
+    assert "if (-not $modelFound)" in script
+    assert "ollama pull $Model" in script
+    assert "if (-not $pulled)" in script
