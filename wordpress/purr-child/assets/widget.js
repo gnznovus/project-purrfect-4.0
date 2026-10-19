@@ -23,6 +23,25 @@
     if (text != null) node.textContent = text;
     return node;
   };
+  // Exact location requests may offer a deterministic, product-verified handoff.
+  // No model-generated URL, element ID, or CSS selector is ever executed.
+  const guidanceTargets = Array.isArray(cfg.guidanceTargets) ? cfg.guidanceTargets : [];
+  function findDestination(message) {
+    if (!/\\b(where|find|locate|show me|take me to|navigate to)\\b/i.test(message)) return null;
+    const normalized = message.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const matches = guidanceTargets.filter(target => Array.isArray(target.keywords) &&
+      target.keywords.some(phrase => typeof phrase === 'string' && phrase.length >= 5 &&
+        (' ' + normalized + ' ').includes(' ' + phrase.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ')));
+    return matches.length === 1 ? matches[0] : null;
+  }
+  function whoosh(target) {
+    if (!target || !guidanceTargets.some(x => x.id === target.id && x.url === target.url && x.element_id === target.element_id)) return;
+    let url;
+    try { url = new URL(target.url, location.href); } catch { return; }
+    if (url.origin !== location.origin || !url.pathname.endsWith('/wp-admin/admin.php')) return;
+    url.searchParams.set('purr_whoosh', target.element_id);
+    location.assign(url.href);
+  }
   const avatar = () => {
     const img = element('img', 'pc-avatar');
     img.src = cfg.purraAvatar; img.alt = ''; img.loading = 'eager';
@@ -83,6 +102,17 @@
         button.disabled = !pending || pending.turn !== entry.turn || busy;
         button.addEventListener('click', () => {
           if (busy || !pending || pending.turn !== entry.turn) return;
+          if (entry.navigation && (option.id === 'purr_whoosh_yes' || option.id === 'purr_whoosh_no')) {
+            const selected = guidanceTargets.find(x => x.id === entry.navigation);
+            entry.consumed = true; delete entry.options; pending = null;
+            remember('You', option.label);
+            if (option.id === 'purr_whoosh_yes') {
+              save();
+              if (selected) whoosh(selected);
+              else remember('Purr', 'That destination is no longer available.');
+            } else remember('Purr', 'No problem! I can explain it here instead.');
+            return;
+          }
           remember('You', option.label);
           submit('', option.id);
         });
@@ -120,8 +150,9 @@
     log.append(line);
     log.scrollTop = log.scrollHeight;
   }
-  function remember(role, text, options = null, trace = null) {
+  function remember(role, text, options = null, trace = null, navigation = null) {
     const entry = { role, text };
+    if (navigation) entry.navigation = navigation;
     if (trace) entry.trace = trace;
     if (options) {
       entry.turn = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
@@ -236,6 +267,14 @@
       save();
       return;
     }
-    remember('You', text); submit(text);
+    remember('You', text);
+    const destination = findDestination(text);
+    if (destination) {
+      remember('Purr', 'I found ' + destination.label + ' in the active product. Want me to take you there?',
+        [{ id: 'purr_whoosh_yes', label: 'Yes, take me there' }, { id: 'purr_whoosh_no', label: 'No, thanks' }],
+        null, destination.id);
+      return;
+    }
+    submit(text);
   });
 })();
