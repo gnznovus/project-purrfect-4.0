@@ -14,12 +14,12 @@ class OllamaModel:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    async def complete(self, system: str, user: str) -> str:
+    async def complete(self, system: str, user: str, *, temperature: float = 0.0) -> str:
         payload = {
             "model": self.model,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0},
+            "options": {"temperature": temperature},
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
