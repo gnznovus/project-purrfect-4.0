@@ -24,10 +24,17 @@ function WP([string]$service, [string[]]$commands) {
     & docker.exe compose @composeArgs --profile tools run --rm -T $service wp @commands
     if ($LASTEXITCODE -ne 0) { throw "WP-CLI failed on ${service}: $($commands -join ' ')" }
 }
+# Docker Compose emits status messages on stderr even for successful commands.
+# Windows PowerShell 5.1 turns redirected native stderr into ErrorRecords when
+# ErrorActionPreference is Stop. Quiet probes must inspect exit status instead.
+function Test-WP([string]$service, [string[]]$commands) {
+    $ErrorActionPreference = 'Continue'
+    & docker.exe compose @composeArgs --profile tools run --rm -T $service wp @commands 2>&1 | Out-Null
+    return ($LASTEXITCODE -eq 0)
+}
 function WaitForWP([string]$service) {
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
-        & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core version *> $null
-        if ($LASTEXITCODE -eq 0) { return }
+        if (Test-WP $service @('core', 'version')) { return }
         Start-Sleep -Seconds 3
     }
     throw "WordPress files did not become available for $service"
@@ -35,8 +42,7 @@ function WaitForWP([string]$service) {
 function PrepareSite([string]$service, [string]$url, [string]$title) {
     Step "Checking $title"
     WaitForWP $service
-    & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core is-installed *> $null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-WP $service @('core', 'is-installed'))) {
         Write-Host "Fresh WordPress setup for $url. Enter a local lab admin password when prompted."
         # Interactive WP-CLI prompt prevents password from being embedded in Git or process args.
         & docker.exe compose @composeArgs --profile tools run --rm $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
