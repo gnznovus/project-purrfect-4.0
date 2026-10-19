@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 import re
+from time import perf_counter
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -118,7 +119,7 @@ def _clarify(knowledge: SiteKnowledge):
 
 
 def respond(payload: dict, state: LocalState) -> dict:
-    if not isinstance(payload, dict) or not {"session_id", "message", "selection", "inventory"} <= set(payload) or set(payload) - {"session_id", "message", "selection", "inventory", "context", "knowledge_leases"}:
+    if not isinstance(payload, dict) or not {"session_id", "message", "selection", "inventory"} <= set(payload) or set(payload) - {"session_id", "message", "selection", "inventory", "context", "knowledge_leases", "debug"}:
         raise ValueError("Invalid request")
     session_id, message, selection = payload["session_id"], payload["message"], payload["selection"]
     if not isinstance(session_id, str) or not (1 <= len(session_id) <= 128):
@@ -127,6 +128,11 @@ def respond(payload: dict, state: LocalState) -> dict:
         raise ValueError("Invalid message")
     if selection is not None and not isinstance(selection, str):
         raise ValueError("Invalid selection")
+    debug = payload.get("debug", False)
+    if not isinstance(debug, bool):
+        raise ValueError("Invalid debug mode")
+    began = perf_counter()
+    trace = []
     context = payload.get("context", {})
     snapshot = payload["inventory"]
     result = discover(snapshot)
@@ -168,6 +174,13 @@ def respond(payload: dict, state: LocalState) -> dict:
             answer["context"] = next_state.export()
             if next_workflow is not None:
                 answer["context"]["troubleshooting"] = next_workflow.export()
+            if debug:
+                trace.append({"stage": "Final route", "result": answer.get("routing", answer.get("scope", "unknown")),
+                              "status": answer.get("status", "unknown"),
+                              "buttons": len((answer.get("interaction") or {}).get("options", [])),
+                              "sources": len(answer.get("sources", []))})
+                answer["debug"] = {"duration_ms": round((perf_counter() - began) * 1000),
+                                   "stages": trace}
             return answer
 
         def workflow_response(result):
@@ -248,14 +261,19 @@ def respond(payload: dict, state: LocalState) -> dict:
                 registered = {p.id: p.id for p in knowledge.products.values()}
                 registered["wordpress"] = "General WordPress"
                 registered["other"] = "Other"
+                model_started = perf_counter()
                 meaning = understand_message(state.model, message, {
                     "topic": conversation.topic,
                     "scope": conversation.scope,
                     "has_evidence": bool(conversation.evidence_id),
                     "outcome": conversation.outcome,
                     "has_active_troubleshooting": workflow is not None,
-                }, registered)
-            except Exception:
+                }, registered, trace if debug else None)
+                if debug:
+                    trace.append({"stage": "Unified decision", "result": meaning["intent"] if meaning else "Invalid output; legacy fallback", "ms": round((perf_counter() - model_started) * 1000)})
+            except Exception as error:
+                if debug:
+                    trace.append({"stage": "Unified decision", "result": "Graph error: " + type(error).__name__})
                 meaning = None
             if meaning is not None:
                 intent = meaning["intent"]
