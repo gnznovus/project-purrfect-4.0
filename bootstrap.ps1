@@ -92,46 +92,43 @@ try {
         }
         if (-not $pulled) { throw 'Ollama model download failed after 3 attempts. Rerun bootstrap to resume.' }
     }
-    Step "Running actual Ollama inference smoke test ($Model)"
-    # A first CPU inference can take minutes, and captured stdout otherwise looks frozen.
-    # Launch Docker as a monitored process so progress remains visible while preserving
-    # its response for validation. Store temporary output inside this repository only.
-    $inferenceOut = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.out"
-    $inferenceErr = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.err"
-    $inferenceArgs = @('compose') + @($composeArgs) + @('exec', '-T', 'ollama', 'ollama', 'run', $Model, 'Reply with the single word READY.')
-    $inferenceCommandLine = ($inferenceArgs | ForEach-Object {
-        if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\\"') + '"' } else { $_ }
-    }) -join ' '
-    $inferenceTimeoutSeconds = 600
-    $inferenceClock = [System.Diagnostics.Stopwatch]::StartNew()
-    $inferenceProcess = $null
-    try {
-        Step "Inference running; reporting every 10 seconds (timeout: $inferenceTimeoutSeconds seconds)"
-        $inferenceProcess = Start-Process -FilePath 'docker.exe' -ArgumentList $inferenceCommandLine -NoNewWindow -PassThru -RedirectStandardOutput $inferenceOut -RedirectStandardError $inferenceErr
-        if ($null -eq $inferenceProcess) {
-            throw 'Could not start the Docker inference probe: Start-Process did not return a process.'
-        }
-        while (-not $inferenceProcess.WaitForExit(2000)) {
-            $elapsed = [int]$inferenceClock.Elapsed.TotalSeconds
-            if ($elapsed -ge $inferenceTimeoutSeconds) {
-                Stop-Process -Id $inferenceProcess.Id -Force -ErrorAction SilentlyContinue
-                throw "Ollama inference timed out after $elapsed seconds. Check available CPU/RAM and Ollama logs."
-            }
-            if ($elapsed -ge 10 -and $elapsed % 10 -lt 2) {
-                Step "Ollama still generating... ${elapsed}s elapsed"
-            }
-        }
-        $inferenceClock.Stop()
-        $inferenceProcess.Refresh()
-        $reply = if ((Test-Path $inferenceOut) -and (Get-Item $inferenceOut).Length -gt 0) { (Get-Content $inferenceOut -Raw).Trim() } else { '' }
-        if ($inferenceProcess.ExitCode -ne 0 -or -not $reply) {
-            $diagnostic = if (Test-Path $inferenceErr) { (Get-Content $inferenceErr -Raw).Trim() } else { '' }
-            throw "Ollama inference failed (exit $($inferenceProcess.ExitCode)): $diagnostic"
-        }
-        Step "Ollama inference passed in $([int]$inferenceClock.Elapsed.TotalSeconds)s; received response: $reply"
-    } finally {
-        Remove-Item $inferenceOut, $inferenceErr -Force -ErrorAction SilentlyContinue
-    }
+    Step "Running actual Ollama HTTP inference smoke test ($Model; timeout: 180 seconds)"
+    # Use the same backend-to-Ollama HTTP path that Purr uses at runtime.
+    # The interactive 'ollama run' CLI can hang without ever reaching model generation.
+    # The backend Compose service already receives PURRA_OLLAMA_MODEL from the environment.
+    $inferenceProbe = @'
+import json
+import os
+import sys
+import time
+import urllib.request
+
+model = os.environ.get("PURRA_OLLAMA_MODEL", "llama3.2:3b")
+payload = json.dumps({
+    "model": model,
+    "prompt": "Reply with the single word READY.",
+    "stream": False,
+}).encode("utf-8")
+request = urllib.request.Request(
+    "http://ollama:11434/api/generate",
+    data=payload,
+    headers={"Content-Type": "application/json"},
+)
+started = time.monotonic()
+try:
+    with urllib.request.urlopen(request, timeout=180) as response:
+        result = json.load(response)
+except Exception as error:
+    print(f"Ollama HTTP inference failed: {type(error).__name__}: {error}", file=sys.stderr)
+    sys.exit(1)
+answer = result.get("response", "")
+if not result.get("done") or not isinstance(answer, str) or not answer.strip():
+    print(f"Ollama returned an incomplete or empty response: {result!r}", file=sys.stderr)
+    sys.exit(1)
+print(f"Ollama HTTP inference passed in {time.monotonic() - started:.1f}s; response: {answer.strip()}")
+'@
+    $inferenceProbe | & docker.exe compose @composeArgs exec -T purra python -
+    if ($LASTEXITCODE -ne 0) { throw "Ollama HTTP inference verification failed (exit $LASTEXITCODE)." }
 
     Step 'Initializing Sophia demo knowledge only if its catalog is empty'
     Compose exec -T purra python /workspace/wordpress/lab/bootstrap_knowledge.py
