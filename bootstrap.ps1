@@ -51,6 +51,8 @@ function PrepareSite([string]$service, [string]$url, [string]$title) {
         $adminPassword = [Convert]::ToBase64String($secretBytes)
         $adminPassword | & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
         if ($LASTEXITCODE -ne 0) { throw "WordPress installation failed on $service" }
+        # Keep credentials only in memory for the final success summary.
+        $script:newLabCredentials += [pscustomobject]@{ Url = $url; Username = $AdminUser; Password = $adminPassword }
         # Show immediately in case a later acceptance step fails; never overwrite on rerun.
         Write-Host "New lab admin for $url" -ForegroundColor Yellow
         Write-Host "  Username: $AdminUser"
@@ -61,6 +63,7 @@ function PrepareSite([string]$service, [string]$url, [string]$title) {
     Step "$title plugin activation verified"
 }
 
+$script:newLabCredentials = @()
 try {
     Step 'Checking Docker Desktop and Compose'
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI not found. Install/start Docker Desktop, then retry.' }
@@ -166,7 +169,18 @@ print(f"Ollama HTTP inference passed in {time.monotonic() - started:.1f}s; respo
     Write-Host '  Site A: http://localhost:8084/wp-admin/admin.php?page=purr-child-admin'
     if ($SiteB) { Write-Host '  Site B: http://localhost:8083/wp-admin/admin.php?page=purr-child-admin' }
     Write-Host '  Brain: Ollama (real inference verified)'
-    Write-Host 'Existing admin credentials are preserved on reruns; newly created credentials were shown during setup.'
+    if ($script:newLabCredentials.Count -gt 0) {
+        Write-Host ''
+        Write-Host 'New WordPress lab credentials (save now):' -ForegroundColor Yellow
+        foreach ($credential in $script:newLabCredentials) {
+            Write-Host "  Site: $($credential.Url)"
+            Write-Host "  Username: $($credential.Username)"
+            Write-Host "  Password: $($credential.Password)"
+        }
+        Write-Host 'These passwords are not written to a file and cannot be displayed again on later runs.'
+    } else {
+        Write-Host 'No new accounts created. Existing passwords are preserved in WordPress but cannot be displayed by bootstrap.'
+    }
 } catch {
     Write-Error $_
     exit 1
