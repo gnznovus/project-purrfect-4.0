@@ -98,7 +98,7 @@ try {
     # its response for validation. Store temporary output inside this repository only.
     $inferenceOut = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.out"
     $inferenceErr = Join-Path $PSScriptRoot ".bootstrap-inference-$PID.err"
-    $inferenceArgs = @($composeArgs) + @('exec', '-T', 'ollama', 'ollama', 'run', $Model, 'Reply with the single word READY.')
+    $inferenceArgs = @('compose') + @($composeArgs) + @('exec', '-T', 'ollama', 'ollama', 'run', $Model, 'Reply with the single word READY.')
     $inferenceCommandLine = ($inferenceArgs | ForEach-Object {
         if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\\"') + '"' } else { $_ }
     }) -join ' '
