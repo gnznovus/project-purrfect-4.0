@@ -16,6 +16,7 @@
   let opened = Boolean(saved.opened);
   let greeted = Boolean(saved.greeted);
   let busy = false;
+  let debugMode = Boolean(saved.debugMode);
   const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -61,7 +62,7 @@
   root.append(greeting, fab, panel);
   function save() {
     try { sessionStorage.setItem(storageKey, JSON.stringify({
-      session, history: history.slice(-60), context, pending, opened, greeted
+      session, history: history.slice(-60), context, pending, opened, greeted, debugMode
     })); } catch { /* Storage may be unavailable; chat still works. */ }
   }
   function redraw() {
@@ -89,12 +90,29 @@
       }
       bubble.append(choices);
     }
+    if (entry.trace && typeof entry.trace === 'object' && Array.isArray(entry.trace.stages)) {
+      const details = element('details', 'pc-debug');
+      const summary = element('summary', '', 'Debug trace · ' + (entry.trace.duration_ms ?? '?') + ' ms');
+      details.append(summary);
+      const list = element('ol', '');
+      for (const stage of entry.trace.stages) {
+        if (!stage || typeof stage !== 'object') continue;
+        const bits = [stage.stage, stage.result, stage.ms == null ? '' : stage.ms + ' ms',
+          stage.status ? 'status: ' + stage.status : '',
+          stage.buttons == null ? '' : stage.buttons + ' buttons',
+          stage.sources == null ? '' : stage.sources + ' sources'].filter(Boolean);
+        list.append(element('li', '', bits.join(' · ')));
+      }
+      details.append(list);
+      bubble.append(details);
+    }
     line.append(bubble);
     log.append(line);
     log.scrollTop = log.scrollHeight;
   }
-  function remember(role, text, options = null) {
+  function remember(role, text, options = null, trace = null) {
     const entry = { role, text };
+    if (trace) entry.trace = trace;
     if (options) {
       entry.turn = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
       entry.options = options;
@@ -157,6 +175,7 @@
       body.set('action', 'purr_child_chat'); body.set('nonce', cfg.nonce);
       body.set('session', session); body.set('message', message);
       body.set('context', JSON.stringify(context));
+      if (debugMode) body.set('debug', '1');
       if (selection !== null) body.set('selection', selection);
       const res = await fetch(cfg.endpoint, { method: 'POST', body });
       const result = await res.json();
@@ -165,7 +184,7 @@
       const data = result.data;
       const choices = data.interaction && Array.isArray(data.interaction.options)
         ? data.interaction.options : null;
-      remember('Purr', data.message || 'No response.', choices);
+      remember('Purr', data.message || 'No response.', choices, debugMode ? data.debug : null);
       if (Array.isArray(data.sources) && data.sources.length) {
         remember('Source', data.sources.map(x => x.source).filter(Boolean).join(', '));
       }
@@ -197,6 +216,16 @@
     event.preventDefault();
     const text = input.value.trim();
     if (!text || busy) return;
-    input.value = ''; remember('You', text); submit(text);
+    input.value = '';
+    if (text === '--debug') {
+      debugMode = !debugMode;
+      remember('You', text);
+      remember('Purr', debugMode
+        ? 'Debug mode ON. Each new response will include an expandable diagnostic trace.'
+        : 'Debug mode OFF. Diagnostic traces are hidden for new responses.');
+      save();
+      return;
+    }
+    remember('You', text); submit(text);
   });
 })();
