@@ -9,6 +9,7 @@ import time
 import uuid
 from pathlib import Path
 from threading import RLock
+from urllib.parse import urlsplit
 
 
 def valid_uuid7(value: str) -> bool:
@@ -52,8 +53,16 @@ class PairingRegistry:
     def pair(self, *, code: str, assistant_id: str, site_id: str, site_url: str) -> dict:
         if not valid_uuid7(assistant_id) or not valid_uuid7(site_id):
             raise ValueError("Valid UUIDv7 assistant and site identities required")
-        if not isinstance(site_url, str) or not site_url.startswith("https://") or len(site_url) > 2048:
+        if not isinstance(site_url, str) or len(site_url) > 2048:
             raise ValueError("An HTTPS site URL is required")
+        try:
+            parsed = urlsplit(site_url)
+            if (parsed.scheme != "https" or not parsed.hostname or parsed.username
+                or parsed.password or parsed.query or parsed.fragment or parsed.port == 0
+                or any(ch.isspace() for ch in site_url)):
+                raise ValueError("Invalid HTTPS site URL")
+        except ValueError:
+            raise ValueError("An HTTPS site URL without credentials is required") from None
         if not isinstance(code, str) or len(code) > 160:
             raise PermissionError("Invalid pairing code")
         now = int(time.time())
