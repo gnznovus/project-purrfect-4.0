@@ -114,7 +114,11 @@ def _understand(state: IntentState) -> dict:
         value = json.loads(raw)
     except (ValueError, TypeError):
         value = None
-    return {"proposal": value, "diagnostics": [{"stage": "Ollama", "ms": round((perf_counter() - started) * 1000), "result": "Parsed JSON" if isinstance(value, dict) else "Invalid JSON"}]}
+    step = {"stage": "Ollama", "ms": round((perf_counter() - started) * 1000),
+            "result": "Parsed JSON" if isinstance(value, dict) else "Invalid JSON"}
+    for key, metric in getattr(raw, "metrics", {}).items():
+        step[key] = metric
+    return {"proposal": value, "diagnostics": [step]}
 
 
 def _validate_intent(state: IntentState) -> dict:
