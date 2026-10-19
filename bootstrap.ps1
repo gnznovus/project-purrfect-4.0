@@ -43,10 +43,19 @@ function PrepareSite([string]$service, [string]$url, [string]$title) {
     Step "Checking $title"
     WaitForWP $service
     if (-not (Test-WP $service @('core', 'is-installed'))) {
-        Write-Host "Fresh WordPress setup for $url. Enter a local lab admin password when prompted."
-        # Interactive WP-CLI prompt prevents password from being embedded in Git or process args.
-        & docker.exe compose @composeArgs --profile tools run --rm $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
+        Step "Installing WordPress at $url with generated local-lab credentials"
+        # Secure randomness; password is supplied on stdin, not via command arguments.
+        $secretBytes = New-Object byte[] 24
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        try { $rng.GetBytes($secretBytes) } finally { $rng.Dispose() }
+        $adminPassword = [Convert]::ToBase64String($secretBytes)
+        $adminPassword | & docker.exe compose @composeArgs --profile tools run --rm -T $service wp core install "--url=$url" "--title=$title" "--admin_user=$AdminUser" "--admin_email=$AdminEmail" --skip-email --prompt=admin_password
         if ($LASTEXITCODE -ne 0) { throw "WordPress installation failed on $service" }
+        # Show immediately in case a later acceptance step fails; never overwrite on rerun.
+        Write-Host "New lab admin for $url" -ForegroundColor Yellow
+        Write-Host "  Username: $AdminUser"
+        Write-Host "  Password: $adminPassword"
+        Write-Host 'Save these credentials now; bootstrap does not store or regenerate them for existing sites.'
     }
     WP $service @('plugin', 'activate', 'purr-child', 'mock-layout', 'mock-translation')
     Step "$title plugin activation verified"
@@ -154,7 +163,7 @@ print(f"Ollama HTTP inference passed in {time.monotonic() - started:.1f}s; respo
     Write-Host '  Site A: http://localhost:8084/wp-admin/admin.php?page=purr-child-admin'
     if ($SiteB) { Write-Host '  Site B: http://localhost:8083/wp-admin/admin.php?page=purr-child-admin' }
     Write-Host '  Brain: Ollama (real inference verified)'
-    Write-Host 'The WordPress admin credentials are the ones you chose during installation.'
+    Write-Host 'Existing admin credentials are preserved on reruns; newly created credentials were shown during setup.'
 } catch {
     Write-Error $_
     exit 1
