@@ -247,6 +247,7 @@ function purr_child_admin_data(): array {
         'knowledge' => is_array($knowledge) ? $knowledge : [],
         'heartbeat' => $health,
         'network' => get_option('purr_child_network_health', []),
+        'connection' => purr_child_connection_settings(),
         'plugin_version' => get_file_data(dirname(__DIR__) . '/purr-child.php', ['Version' => 'Version'])['Version'],
         'bootstrap_checksum' => hash_file('sha256', dirname(__DIR__) . '/purr-child.php'),
     ];
@@ -346,7 +347,7 @@ function purr_child_render_admin(): void {
     echo '<section id="purr-admin-knowledge" class="purr-admin-panel" hidden></section>';
     echo '<section id="purr-admin-settings" class="purr-admin-panel" hidden></section></div>';
     wp_enqueue_style('purr-child-admin', plugins_url('../assets/admin.css', __FILE__), [], '0.2.4');
-    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.3', true);
+    wp_enqueue_script('purr-child-admin', plugins_url('../assets/admin.js', __FILE__), [], '0.2.5', true);
     wp_add_inline_script('purr-child-admin', 'window.purrChildAdmin=' . wp_json_encode([
         'endpoint' => admin_url('admin-ajax.php'), 'nonce' => wp_create_nonce('purr_child_admin'),
         'initial' => purr_child_admin_data(),
