@@ -239,7 +239,56 @@ def respond(payload: dict, state: LocalState) -> dict:
                 result = ("worked" if short in ("worked", "it worked", "yes it worked", "fixed", "it is fixed")
                           else "why" if short in ("why", "why this step") else "failed")
                 return workflow_response(result)
-        lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
+        # Unified interpretation is the primary path for free-text messages.
+        # Exact selection IDs and active troubleshooting contracts were handled above.
+        # If the model/graph is unavailable, the legacy deterministic path remains.
+        if state.model is not None:
+            try:
+                from purrfect.stateful_langgraph import understand_message
+                registered = {p.id: p.id for p in knowledge.products.values()}
+                registered["wordpress"] = "General WordPress"
+                registered["other"] = "Other"
+                meaning = understand_message(state.model, message, {
+                    "topic": conversation.topic,
+                    "scope": conversation.scope,
+                    "has_evidence": bool(conversation.evidence_id),
+                    "outcome": conversation.outcome,
+                    "has_active_troubleshooting": workflow is not None,
+                }, registered)
+            except Exception:
+                meaning = None
+            if meaning is not None:
+                intent = meaning["intent"]
+                if intent == "social":
+                    answer = _reply(GuidanceResponse(meaning["response"], "grounded"), "conversation")
+                    answer["routing"] = "unified-intent"
+                    return finish(answer, conversation.updated(pending=False))
+                if intent in ("help", "clarify"):
+                    choices = tuple(Option(item["id"], item["label"])
+                                    for item in meaning["options"] if item["id"] != "other")
+                    interaction = (Interaction(InputKind.SINGLE_SELECT, "support_scope", choices)
+                                   if choices else None)
+                    answer = _reply(GuidanceResponse(
+                        meaning["response"], "needs_input" if interaction else "clarification",
+                        interaction), "conversation")
+                    answer["routing"] = "unified-intent"
+                    return finish(answer, conversation.updated(
+                        topic=message, scope=None, pending=bool(interaction)))
+                if intent in ("product", "wordpress"):
+                    target = meaning["target"] if intent == "product" else "wordpress"
+                    answer = _choose(message, target, knowledge)
+                    answer["routing"] = "unified-intent"
+                    return finish(answer, conversation.updated(topic=message, scope=target,
+                        pending=answer["status"] == "needs_input"))
+                if intent == "unresolved":
+                    answer = _reply(GuidanceResponse(meaning["response"], "clarification"), "conversation")
+                    answer["routing"] = "unified-intent"
+                    return finish(answer, conversation.updated(
+                        outcome="unresolved", pending=False))
+                if intent == "followup" and conversation.topic:
+                    # Preserve the existing evidence-bound followup implementation.
+                    pass
+                lowered = re.sub(r"[^a-z0-9 ]", "", message.lower()).strip()
         # The model is the first gate for conversational language. Product
         # evidence and interactive selections continue through fixed contracts.
         greeting = lowered in ("hi", "hello", "hey", "hi purra", "hello purra")
