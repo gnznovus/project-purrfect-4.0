@@ -120,10 +120,12 @@ def _understand(state: IntentState) -> dict:
 def _validate_intent(state: IntentState) -> dict:
     value = state.get("proposal")
     diagnostics = list(state.get("diagnostics", []))
+    def reject(reason):
+        return {"decision": None, "diagnostics": diagnostics + [{"stage": "Validation", "result": reason}]}
     valid_intents = {"social", "help", "product", "wordpress", "resolved",
                      "unresolved", "followup", "clarify", "unsupported"}
     if not isinstance(value, dict) or set(value) != {"intent", "target", "response", "options"}:
-        return {"decision": None}
+        return reject("Rejected: malformed or untrusted model proposal")
     kind, target, response, options = (value[key] for key in
                                        ("intent", "target", "response", "options"))
     catalog = state["catalog"]
