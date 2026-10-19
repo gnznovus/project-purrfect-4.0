@@ -187,7 +187,7 @@
           feedback.textContent = knowledgeAvailable()
             ? 'Sophia has recovered. Knowledge controls are available.'
             : 'Sophia is unavailable. Knowledge controls are paused.';
-        } else if (document.querySelector('[data-purr-tab="settings"].is-active')) draw();
+        } else if (document.querySelector('[data-purr-tab="settings"].is-active') && document.activeElement?.id !== 'purr-api-endpoint') draw();
       }
     } catch (_) {
       // A polling failure cannot invalidate the last-good lease or enable controls.
