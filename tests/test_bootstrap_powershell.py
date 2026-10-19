@@ -32,6 +32,7 @@ def test_missing_ollama_model_is_pulled_without_failing_show():
 
 def test_inference_smoke_test_reports_progress_and_timeout():
     script = BOOTSTRAP.read_text(encoding="utf-8-sig")
+    assert "$inferenceArgs = @('compose') + @($composeArgs)" in script
     assert "Start-Process -FilePath 'docker.exe'" in script
     assert "Ollama still generating" in script
     assert "inferenceTimeoutSeconds = 600" in script
