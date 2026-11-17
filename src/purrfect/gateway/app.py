@@ -1,7 +1,10 @@
 """Public API boundary: verified tenant/session scope, HTTP and SSE contracts."""
 import json
+import secrets
+import time
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from fastapi.responses import StreamingResponse
 from purrfect.core.contracts import ChatCommand, TenantContext
 from purrfect.core.service import AccessDenied, PurrCore
@@ -30,8 +33,41 @@ def _frame(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def create_app(core: PurrCore, registry: ClientVerifier, tickets: SessionTickets) -> FastAPI:
+def create_app(core: PurrCore, registry: ClientVerifier, tickets: SessionTickets, *, metrics=None, metrics_token: str | None = None) -> FastAPI:
     app = FastAPI(title="Purr Gateway", version="1.0.0")
+
+    if metrics is not None:
+        @app.middleware("http")
+        async def record_request(request: Request, call_next):
+            # Static, bounded route labels; no full paths, credentials, or user data.
+            routes = {"/v1/chat": "chat", "/v1/chat/stream": "stream",
+                      "/v1/sessions": "session", "/v1/health": "health"}
+            route = routes.get(request.url.path)
+            if route is None:
+                return await call_next(request)
+            start = time.monotonic()
+            try:
+                response = await call_next(request)
+            except Exception:
+                metrics.observe("request", "error", time.monotonic() - start, route=route)
+                raise
+            # Streaming is recorded on completion inside events(), not on headers.
+            if route != "stream" or response.status_code != 200:
+                outcome = "ok" if response.status_code < 400 else "error"
+                metrics.observe("request", outcome, time.monotonic() - start, route=route)
+            return response
+
+    if metrics is not None and metrics_token is not None:
+        if len(metrics_token) < 32:
+            raise ValueError("Monitoring bearer secret must be 32+ characters")
+
+        @app.get("/internal/metrics", include_in_schema=False)
+        async def protected_metrics(authorization: str | None = Header(default=None)):
+            supplied = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
+            if not secrets.compare_digest(supplied, metrics_token):
+                raise HTTPException(401, detail="Invalid monitoring credentials")
+            return PlainTextResponse(metrics.render(), media_type="text/plain; version=0.0.4")
+
 
     def authenticate(authorization: str | None = Header(default=None)) -> TenantContext:
         tenant = registry.resolve(authorization)
@@ -85,12 +121,20 @@ def create_app(core: PurrCore, registry: ClientVerifier, tickets: SessionTickets
         command = command_for(request, tenant, session_id)
 
         async def events():
+            start = time.monotonic()
+            outcome = "cancelled"
             try:
                 async for event in core.stream(tenant, command):
+                    if event["event"] == "done":
+                        outcome = "ok"
                     yield _frame(event["event"], event["data"])
             except Exception as exc:
+                outcome = "error"
                 error = _translate(exc)
                 yield _frame("error", {"status": error.status_code, "message": error.detail})
+            finally:
+                if metrics is not None:
+                    metrics.observe("stream", outcome, time.monotonic() - start, route="stream")
 
         return StreamingResponse(
             events(), media_type="text/event-stream",

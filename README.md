@@ -9,6 +9,7 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 - **State:** in-memory/SQLite for local development; optional Redis shared session history and cross-worker serialization.
 - **Inference:** tenant-fair local queue plus optional Redis-backed global model capacity (when Ollama and Redis are enabled).
 - **Retrieval:** revision-aware per-process evidence cache.
+- **Observability:** per-process bounded histogram metrics for HTTP requests, SSE lifecycles, local/global admission wait, and model execution; no raw tenant labels or chat contents.
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
@@ -65,6 +66,12 @@ Configure the same limits in every worker:
 
 The Redis integration tests run against a dedicated Redis test service in GitHub CI. For local integration tests, run a disposable Redis instance, set `PURR_TEST_REDIS_URL` to its isolated database, and run `python -m pytest`. Tests flush that test database.
 
+## Operational metrics
+
+Set a separate secret `PURR_METRICS_TOKEN` (at least 32 characters) to enable `GET /internal/metrics`. Use `Authorization: Bearer <monitor-token>` from a private monitoring network. The application client's Bearer token **cannot** scrape metrics. Without a monitoring token, this route is not registered.
+
+Metrics use Prometheus histogram text format: `purr_operation_seconds` with bounded `kind`, `outcome`, `route`, and `tenant_bucket` labels. A tenant maps to one of 16 deterministic hash buckets, **not a unique tenant ID**. Collisions are intentional to avoid unbounded cardinality; bucket counts are useful for rough capacity skew, not exact tenant-level billing, audit, or isolation. Prompt text, source content, session IDs and secrets are not exported. Each worker exposes its **own process-local** series: aggregate in the monitoring system. The global queue metrics cover time waiting for a Redis permit; local scheduler metrics cover time waiting in this worker. Model timing is measured only while executing the model operation. SSE durations are measured at stream completion, not response headers. This is observability instrumentation only; alerts, dashboards, traces, and production load benchmarks remain future work.
+
 ## Other configuration
 
 - `PURR_CLIENTS_JSON` — trusted static development client credentials with optional expiry/disable controls.
@@ -73,6 +80,6 @@ The Redis integration tests run against a dedicated Redis test service in GitHub
 - `PURR_MODEL_BACKEND` — deterministic or ollama.
 - `PURR_OLLAMA_URL`, `PURR_OLLAMA_MODEL`, `PURR_SOPHIA_DB`.
 - `PURR_INFERENCE_CONCURRENCY`, `PURR_QUEUE_LIMIT`, `PURR_TENANT_QUEUE_LIMIT`, `PURR_QUEUE_TIMEOUT`, `PURR_RETRIEVAL_CACHE_SIZE`.
-- `PURR_HISTORY_LIMIT`, `PURR_HOST`, `PURR_PORT`.
+- `PURR_HISTORY_LIMIT`, `PURR_HOST`, `PURR_PORT`, `PURR_METRICS_TOKEN`.
 
 The production authentication provider is not chosen. Client credentials authenticate the Assistant backend, but anonymous visitor identity and binding to its session ticket remain the Assistant backend's responsibility. There is no per-ticket revocation or centralized client-credential management. Redis does not make this a production-ready multi-node AI service on its own.

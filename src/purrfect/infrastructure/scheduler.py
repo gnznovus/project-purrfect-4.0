@@ -3,6 +3,7 @@
 Single event loop / process only. No durable jobs or distributed coordination.
 """
 import asyncio
+import time
 from collections import deque
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
@@ -25,9 +26,11 @@ class FairInferenceScheduler:
         max_waiting: int = 4,
         max_waiting_per_tenant: int = 2,
         queue_timeout: float = 5.0,
+        metrics=None,
     ) -> None:
         if slots < 1 or max_waiting < 0 or max_waiting_per_tenant < 1 or queue_timeout <= 0:
             raise ValueError("Invalid scheduler limits")
+        self._metrics = metrics
         self._slots = slots
         self._max_waiting = max_waiting
         self._per_tenant = max_waiting_per_tenant
@@ -69,6 +72,7 @@ class FairInferenceScheduler:
         if not tenant:
             raise ValueError("Tenant required")
         future: asyncio.Future[None] | None = None
+        started = time.monotonic()
         async with self._lock:
             if self._running < self._slots and not self._order:
                 self._running += 1
@@ -76,6 +80,8 @@ class FairInferenceScheduler:
                 queue = self._queues.get(tenant)
                 if (self._waiting >= self._max_waiting or
                         (queue is not None and len(queue) >= self._per_tenant)):
+                    if self._metrics:
+                        self._metrics.observe("queue_local", "overloaded", time.monotonic() - started, tenant=tenant)
                     raise SchedulerOverloaded("Inference queue is full")
                 future = asyncio.get_running_loop().create_future()
                 if queue is None:
@@ -91,9 +97,13 @@ class FairInferenceScheduler:
             except (asyncio.CancelledError, TimeoutError) as exc:
                 async with self._lock:
                     self._revoke_locked(tenant, future)
+                if self._metrics:
+                    self._metrics.observe("queue_local", "timeout" if isinstance(exc, TimeoutError) else "cancelled", time.monotonic() - started, tenant=tenant)
                 if isinstance(exc, TimeoutError):
                     raise SchedulerTimeout("Inference queue wait timed out") from None
                 raise
+        if self._metrics:
+            self._metrics.observe("queue_local", "ok", time.monotonic() - started, tenant=tenant)
         try:
             return await operation()
         finally:
