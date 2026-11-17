@@ -1,7 +1,6 @@
-"""Gateway-issued, tenant-bound bearer proof for anonymous conversation sessions.
+"""Gateway-issued, tenant-bound anonymous session proof with signing-key rollover.
 
-This establishes possession of a session ticket, not human identity. Only the
-authenticated Assistant backend may mint tickets; external identity is future work.
+Possession-based only; does NOT establish a visitor's human identity.
 """
 import base64
 import hashlib
@@ -34,12 +33,15 @@ class IssuedSession:
 
 
 class SessionTickets:
-    def __init__(self, secret: str, lifetime: int = 86400):
-        if not isinstance(secret, str) or len(secret.encode("utf-8")) < 32:
-            raise ValueError("Session signing key must have at least 32 bytes")
-        if not isinstance(lifetime, int) or not 60 <= lifetime <= 604800:
+    def __init__(self, secret: str, lifetime: int = 86400, previous_secrets: tuple[str, ...] = ()):
+        keys = (secret, *previous_secrets)
+        if (not isinstance(previous_secrets, tuple) or not 1 <= len(keys) <= 4
+                or any(not isinstance(k, str) or len(k.encode("utf-8")) < 32 for k in keys)
+                or len(set(keys)) != len(keys)):
+            raise ValueError("Signing keys must be distinct and at least 32 bytes")
+        if type(lifetime) is not int or not 60 <= lifetime <= 604800:
             raise ValueError("Session lifetime must be 60–604800 seconds")
-        self._key = secret.encode("utf-8")
+        self._keys = tuple(key.encode("utf-8") for key in keys)
         self._lifetime = lifetime
 
     def issue(self, tenant_id: str) -> IssuedSession:
@@ -50,7 +52,7 @@ class SessionTickets:
             {"v": 1, "tid": tenant_id, "sid": sid, "exp": expires_at},
             separators=(",", ":"), sort_keys=True,
         ).encode("utf-8"))
-        sig = _encode(hmac.new(self._key, payload.encode("ascii"), hashlib.sha256).digest())
+        sig = _encode(hmac.new(self._keys[0], payload.encode("ascii"), hashlib.sha256).digest())
         return IssuedSession(sid, f"{payload}.{sig}", expires_at)
 
     def verify(self, ticket: str | None, tenant_id: str) -> str:
@@ -58,8 +60,12 @@ class SessionTickets:
             if not isinstance(ticket, str) or len(ticket) > 2048:
                 raise InvalidSession("Invalid session credential")
             payload, sig = ticket.split(".")
-            expected = hmac.new(self._key, payload.encode("ascii"), hashlib.sha256).digest()
-            if not hmac.compare_digest(_decode(sig), expected):
+            signature = _decode(sig)
+            valid = False
+            for key in self._keys:
+                expected = hmac.new(key, payload.encode("ascii"), hashlib.sha256).digest()
+                valid = hmac.compare_digest(signature, expected) or valid
+            if not valid:
                 raise InvalidSession("Invalid session credential")
             claims = json.loads(_decode(payload))
             if (not isinstance(claims, dict) or set(claims) != {"v", "tid", "sid", "exp"}
