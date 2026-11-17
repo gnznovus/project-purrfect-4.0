@@ -22,16 +22,21 @@ class Admission:
             if self._waiting >= self._maximum:
                 raise HTTPException(429, detail="Purr is busy", headers={"Retry-After": "2"})
             self._waiting += 1
+        acquired = False
         try:
             await asyncio.wait_for(self._slots.acquire(), timeout=self.timeout)
+            acquired = True
         except TimeoutError:
             raise HTTPException(503, detail="Inference queue timed out", headers={"Retry-After": "2"}) from None
         finally:
-            async with self._lock:
-                self._waiting -= 1
+            if not acquired:
+                async with self._lock:
+                    self._waiting -= 1
 
-    def release(self):
-        self._slots.release()
+    async def release(self):
+        async with self._lock:
+            self._waiting -= 1
+            self._slots.release()
 
 def create_app(core: PurrCore, registry: CredentialRegistry, admission: Admission | None = None) -> FastAPI:
     app = FastAPI(title="Purr Gateway", version="1.0.0")
@@ -62,7 +67,7 @@ def create_app(core: PurrCore, registry: CredentialRegistry, admission: Admissio
         except Exception as exc:
             raise HTTPException(503, detail="Purr Core is temporarily unavailable") from exc
         finally:
-            limiter.release()
+            await limiter.release()
         return ChatResponse(session_id=result.session_id, status=result.status,
                             message=result.message,
                             sources=[dict(id=s.id, source=s.source, product_id=s.product_id)
