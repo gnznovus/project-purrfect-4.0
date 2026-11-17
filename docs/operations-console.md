@@ -2,7 +2,26 @@
 
 This is a separate **operator-only webapp**, not an extension of Purr Core and not a public client widget.
 
-## Launch
+## Preferred setup — persistent local JSON
+
+From the repository checkout, run once:
+
+```powershell
+python -m purrfect.config init
+```
+
+This creates `config/local.json` with fresh random signing, Gateway, monitoring, and Console credentials, cross-linked automatically. **The file is ignored by Git and never overwritten by repeated initialization.** You can edit values later in a regular editor. Do not commit or share it. See `config/local.example.json` for the schema (non-secret placeholders only).
+
+Then launch the services in separate terminals from the repository checkout:
+
+```powershell
+python -m purrfect
+python -m purrfect.operations
+```
+
+The Console starts at `http://127.0.0.1:8775`. Enter the value of `PURR_OPERATIONS_TOKEN` stored in `config/local.json`. Environment settings can still override matching config values for deployment, but are not required for local use. By default this file is resolved relative to the source checkout, not the terminal's current directory.
+
+## Manual environment-based launch (optional)
 
 Start Purr Gateway separately (`python -m purrfect`) with `PURR_CLIENTS_JSON` and `PURR_SESSION_SIGNING_KEY`. For live inference, configure `PURR_MODEL_BACKEND=ollama` and `PURR_OLLAMA_URL`/model as appropriate. For operational telemetry, configure `PURR_METRICS_TOKEN` on the Gateway.
 

@@ -7,3 +7,6 @@ __pycache__/
 *.db-shm
 *.db-wal
 .env
+/config/local.json
+/config/local.*.json
+!/config/local.example.json

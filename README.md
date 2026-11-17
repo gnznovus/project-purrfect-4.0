@@ -13,6 +13,10 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
+## Persistent local configuration (recommended)
+
+Run `python -m purrfect.config init` once after `python -m pip install -e ".[dev]"`. This creates `config/local.json` with randomly generated Gateway, Console and monitoring credentials. It is excluded from Git; only `config/local.example.json` is tracked. From then on, launch Gateway using `python -m purrfect` and Console using `python -m purrfect.operations` in separate terminals—no environment-variable setup needed. Environment values override local config if explicitly provided. Do not share local config or deploy it as a public asset.
+
 ## Purr Operations Console (V2.9)
 
 A separate operator-only webapp offers Gateway health, metrics, bounded live inference benchmarks, persisted SQLite reports and reliability diagnostics. Start it independently with `python -m purrfect.operations` after configuring the operations and Gateway credentials. See [Operations Console setup and security](docs/operations-console.md). The Console does not add benchmark endpoints to the public Gateway or Purr Core.
