@@ -13,24 +13,31 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
-## Single-command local development supervisor (Windows)
+## Purr CLI — one command for development (Windows)
 
-Run `purrfect.init` **once** from the repository root. It creates a Python 3.14 `.venv` if missing, installs development dependencies, and generates missing credentials in the Git-ignored `.env`; existing credentials are preserved. The old `.\\setup-local.ps1` delegates to the same bootstrap.
-
-Then use the following commands from the repository root in PowerShell or CMD:
+Run the one-time bootstrap from the repository root:
 
 ```powershell
-.\\purrfect.start.cmd
-.\\purrfect.status.cmd
-.\\purrfect.restart.cmd
-.\\purrfect.stop.cmd
+.\purrfect.init.cmd
 ```
 
-With the repository folder on `PATH`, the commands may also be invoked as `purrfect.start`, `purrfect.status`, `purrfect.restart`, and `purrfect.stop`. Without that PATH entry, run `.\\purrfect.start` etc. in PowerShell (or use the explicit `.cmd` suffix).
+It creates/reuses the Python 3.14 virtual environment, installs the project, creates/migrates the Git-ignored `.env` without rotating existing secrets, and registers a small `purrfect.cmd` user-level shim under `%LOCALAPPDATA%\Purrfect\bin`. The bootstrap adds that directory to your **user PATH** if necessary. **Open a new terminal** to pick up the updated PATH.
 
-`start` launches Gateway (:8765) and Operations Console (:8775) in a detached supervisor process, waits for their configured local TCP ports, then returns control to the terminal. `stop` gracefully shuts down **only supervised children**, `status` reports ownership and health, and `restart` performs stop + start. Logs and process metadata live in ignored `.purrfect/`. `start` refuses occupied ports rather than attaching to foreign servers. Ports are configurable in `.env`; Ollama/Redis are **checked through runtime connection behavior**, not automatically installed or launched.
+From then on, in PowerShell or CMD, from any working directory:
 
-**Development-only boundary:** `PURR_ENV=development` is set in freshly generated `.env`. The supervisor and dev init commands refuse execution when `PURR_ENV=production` (or another non-development mode). The production Gateway and Console remain deployed through your own process manager. The local supervisor supports Windows only and is not a production service manager.
+```powershell
+purrfect init
+purrfect start
+purrfect status
+purrfect restart
+purrfect stop
+```
+
+The CLI uses this checkout's `.venv\Scripts\python.exe` regardless of the active Python version. `purrfect init` only initializes missing local credentials once the CLI is installed; repeat initialization never overwrites your `.env`. `start` detaches Gateway and Operations Console (:8765 and :8775), `stop` shuts down only managed processes, and `status` reads process ownership. Runtime state/logs are in ignored `.purrfect/`.
+
+To move the checkout, run `.\purrfect.init.cmd` from the new location to refresh the managed shim. If another unrecognized `purrfect.cmd` exists at the registration location, the installer refuses to overwrite it. For local debugging, direct foreground launchers remain available.
+
+**Development only:** the supervisor and dev-init commands refuse `PURR_ENV=production`. Do not use this process manager for deployment. Windows runtime validation is still required; CI runs on Linux.
 
 ## Windows local development — no activation needed
 
