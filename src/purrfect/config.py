@@ -65,6 +65,7 @@ def _new_secrets() -> dict[str, str]:
         "PURR_OPERATIONS_METRICS_TOKEN": monitor,
         "PURR_OPERATIONS_GATEWAY_URL": "http://127.0.0.1:8765",
         "PURR_OPERATIONS_MODEL_LABEL": "Development Gateway",
+        "PURR_OPERATIONS_DEV_AUTO_AUTH": "1",
     }
 
 
@@ -97,6 +98,8 @@ def initialize(path: Path | None = None, *, legacy_path: Path | None = None) -> 
     if target.is_symlink() or target.exists():
         raise FileExistsError(".env already exists; refusing to overwrite credentials")
     values = _migrate_legacy(old) if old.is_file() or old.is_symlink() else _new_secrets()
+    # Existing legacy values remain intact; add only the missing dev convenience flag.
+    values.setdefault("PURR_OPERATIONS_DEV_AUTO_AUTH", "1")
     target.parent.mkdir(parents=True, exist_ok=True)
     # dotenv accepts JSON-quoted values and decodes escaping; no interpolation.
     content = (
