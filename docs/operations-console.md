@@ -79,6 +79,12 @@ Open `http://127.0.0.1:8775` and supply `PURR_OPERATIONS_TOKEN` in the login ove
 
 Tests call the **configured Gateway origin only** (no user-provided target URLs). Product-specific test content, model switching and prompt customization are not available in this foundation. To compare model configurations, change the Gateway's model, update `PURR_OPERATIONS_MODEL_LABEL`, run another benchmark, and compare saved histories. The model label is operator-supplied, not cryptographically verified from the inference backend.
 
+## Automatic local development login
+
+In `PURR_ENV=development`, the Console auto-unlocks **only** when bound to loopback and accessed by a same-origin loopback browser. It uses the existing `.env` credentials on the server but **never sends the operator token to JavaScript**. This is an intentionally local, developer-trusted shortcut—not username/password authentication. Requests from non-loopback peers, foreign Hosts, cross-site fetches, or mismatched Origins cannot use it. An attacker running software on the same machine could access the local Console while this feature is enabled; use only on a trusted development computer.
+
+Set `PURR_OPERATIONS_DEV_AUTO_AUTH="0"` in `.env` to restore the manual token prompt, then run `purrfect restart`. Setting `PURR_ENV=production` disables auto-login unconditionally (and also disables the development supervisor). Production Console access remains token-protected pending future user/password authentication.
+
 ## Configuration
 
 - `PURR_OPERATIONS_TOKEN` — required, independent operator access secret, 32+ chars.

@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -34,7 +34,8 @@ def build_console(*, operator_token: str, gateway_token: str, gateway_url: str,
                   metrics_token: str | None, store: BenchmarkStore,
                   model_label: str = "Configured Gateway",
                   transport: httpx.AsyncBaseTransport | None = None,
-                  runner: BenchmarkRunner | None = None) -> FastAPI:
+                  runner: BenchmarkRunner | None = None,
+                  dev_auto_auth: bool = False) -> FastAPI:
     if (not isinstance(operator_token, str) or len(operator_token) < 32
             or not isinstance(gateway_token, str) or len(gateway_token) < 16
             or (metrics_token is not None and len(metrics_token) < 32)):
@@ -49,11 +50,31 @@ def build_console(*, operator_token: str, gateway_token: str, gateway_url: str,
     app = FastAPI(title="Purr Operations", docs_url=None, redoc_url=None, openapi_url=None)
     busy = asyncio.Lock()
 
-    def authorized(authorization: str | None = Header(default=None)):
-        value = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
-        if not secrets.compare_digest(value, operator_token):
-            raise HTTPException(401, detail="Invalid operations credentials")
+    def allowed_local(request: Request) -> bool:
+        """Dev-only same-machine trust; never disclose the operator secret."""
+        if not dev_auto_auth:
+            return False
+        client = request.client.host if request.client else ""
+        host = request.url.hostname
+        if client not in ("127.0.0.1", "::1") or host not in ("127.0.0.1", "::1", "localhost"):
+            return False
+        if request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none"):
+            return False
+        origin = request.headers.get("origin")
+        if origin and origin != str(request.base_url).rstrip("/"):
+            return False
         return True
+
+    def authorized(request: Request, authorization: str | None = Header(default=None)):
+        value = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
+        if secrets.compare_digest(value, operator_token) or allowed_local(request):
+            return True
+        raise HTTPException(401, detail="Invalid operations credentials")
+
+    @app.get("/api/auth/status")
+    async def auth_status(request: Request):
+        # The browser learns only the authentication mode, not the .env secret.
+        return {"auto_login": allowed_local(request)}
 
     @app.middleware("http")
     async def harden(request, call_next):
