@@ -1,13 +1,15 @@
-"""Purr Core: tenant-bound conversation and Sophia-grounded product guidance."""
+"""Framework-independent Purr conversation, retrieval, and streaming."""
+import asyncio
 import re
-from collections import OrderedDict
-from collections.abc import Awaitable, Callable
+import weakref
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from threading import RLock
 from typing import Protocol, TypeVar
 
 from purrfect.core.contracts import ChatCommand, ChatResult, Source, TenantContext
 from purrfect.sophira import KnowledgeItem, KnowledgePackage
+from purrfect.infrastructure.sessions import MemorySessions
 
 
 class TextModel(Protocol):
@@ -29,6 +31,11 @@ class InferenceScheduler(Protocol):
 class EvidenceCache(Protocol):
     def lookup(self, tenant: str, product_id: str, package: KnowledgePackage,
                query: str, retrieve: Callable) -> tuple[KnowledgeItem, ...]: ...
+
+
+class SessionStore(Protocol):
+    def read(self, tenant: str, session: str) -> tuple[tuple[str, str], ...]: ...
+    def append(self, tenant: str, session: str, question: str, answer: str) -> None: ...
 
 
 class AccessDenied(Exception):
@@ -56,22 +63,31 @@ class PurrCore:
     model: TextModel | None = None
     scheduler: InferenceScheduler | None = None
     evidence_cache: EvidenceCache | None = None
-    history_limit: int = 6
-    session_limit: int = 1024
-    _sessions: OrderedDict = field(default_factory=OrderedDict, init=False)
-    _lock: RLock = field(default_factory=RLock, init=False)
+    sessions: SessionStore = field(default_factory=MemorySessions)
+    _locks: weakref.WeakValueDictionary = field(default_factory=weakref.WeakValueDictionary, init=False)
+    _guard: RLock = field(default_factory=RLock, init=False)
 
-    async def respond(self, tenant: TenantContext, command: ChatCommand) -> ChatResult:
-        if not tenant.tenant_id or not isinstance(tenant.allowed_products, frozenset):
+    def _session_lock(self, tenant: str, session: str) -> asyncio.Lock:
+        key = (tenant, session)
+        with self._guard:
+            lock = self._locks.get(key)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._locks[key] = lock
+            return lock
+
+    def _prepare(self, tenant: TenantContext, command: ChatCommand):
+        if (not isinstance(tenant.tenant_id, str) or not tenant.tenant_id or
+                not isinstance(tenant.allowed_products, frozenset)):
             raise ValueError("Invalid verified tenant context")
-        if not 1 <= len(command.session_id) <= 128 or not command.message.strip() or len(command.message) > 2000:
+        if (not isinstance(command.session_id, str) or not 1 <= len(command.session_id) <= 128
+                or not isinstance(command.message, str) or not command.message.strip()
+                or len(command.message) > 2000):
             raise ValueError("Invalid message or session")
         if (command.product_id is None) != (command.product_version is None):
             raise ValueError("Product identity must be paired")
         if command.product_id is not None and command.product_id not in tenant.allowed_products:
             raise AccessDenied("Product not authorized")
-
-        key = (tenant.tenant_id, command.session_id)
         evidence = ()
         if command.product_id is not None and self.catalog is not None:
             scoped_id = f"{tenant.tenant_id}/{command.product_id}"
@@ -81,39 +97,103 @@ class PurrCore:
                     tenant.tenant_id, command.product_id, package, command.message, retrieve)
                     if self.evidence_cache else retrieve(package, command.message))
         sources = tuple(Source(item.id, item.source, command.product_id) for item in evidence)
-        with self._lock:
-            previous = tuple(self._sessions.get(key, ()))
+        return evidence, sources
 
+    def _prompt(self, tenant: TenantContext, command: ChatCommand, evidence):
+        previous = self.sessions.read(tenant.tenant_id, command.session_id)
+        citations = "\n".join(f"[{item.id}] {item.content}" for item in evidence)
+        history = "\n".join(f"User: {question}\nPurr: {reply}" for question, reply in previous)
+        system = ("You are Purr, a natural, concise product assistant. "
+                  "For product questions use only approved excerpts. "
+                  "Never invent product facts, steps, or sources. Otherwise chat naturally.")
+        return system, f"History:\n{history}\nApproved excerpts:\n{citations}\nUser: {command.message}"
+
+    @staticmethod
+    def _fallback(command: ChatCommand, evidence):
         if command.product_id is not None and not evidence:
-            answer = "I don't have verified guidance for that question yet. Could you clarify what you're trying to do?"
-            status = "knowledge_gap"
-        elif self.model is not None:
-            citations = "\n".join(f"[{item.id}] {item.content}" for item in evidence)
-            history = "\n".join(f"User: {question}\nPurr: {reply}" for question, reply in previous)
-            system = ("You are Purr, a natural, concise product assistant. "
-                      "For product questions use only approved excerpts. "
-                      "Never invent product facts, steps, or sources. Otherwise chat naturally.")
-            prompt = f"History:\n{history}\nApproved excerpts:\n{citations}\nUser: {command.message}"
-            async def generate():
-                return await self.model.complete(system, prompt)
-            answer = (await self.scheduler.run(tenant.tenant_id, generate)
-                      if self.scheduler is not None else await generate())
-            if not isinstance(answer, str) or not answer.strip():
-                raise RuntimeError("Inference returned no answer")
-            status = "grounded" if command.product_id is not None else "conversation"
-        elif command.product_id is not None:
-            answer = "\n\n".join(item.content for item in evidence)
-            status = "grounded"
-        else:
-            answer = ("Hi! I'm Purr. What can I help you with?" if _terms(command.message) & {"hi", "hello", "hey"}
-                      else "I'm here to help with product questions. Which product are you using?")
-            status = "conversation"
+            return "I don't have verified guidance for that question yet. Could you clarify what you're trying to do?", "knowledge_gap"
+        if command.product_id is not None:
+            return "\n\n".join(item.content for item in evidence), "grounded"
+        answer = ("Hi! I'm Purr. What can I help you with?" if _terms(command.message) & {"hi", "hello", "hey"}
+                  else "I'm here to help with product questions. Which product are you using?")
+        return answer, "conversation"
 
-        with self._lock:
-            history = self._sessions.setdefault(key, [])
-            history.append((command.message, answer))
-            self._sessions[key] = history[-self.history_limit:]
-            self._sessions.move_to_end(key)
-            while len(self._sessions) > self.session_limit:
-                self._sessions.popitem(last=False)
-        return ChatResult(command.session_id, status, answer, sources)
+    async def respond(self, tenant: TenantContext, command: ChatCommand) -> ChatResult:
+        async with self._session_lock(tenant.tenant_id, command.session_id):
+            evidence, sources = self._prepare(tenant, command)
+            if command.product_id is not None and not evidence or self.model is None:
+                answer, status = self._fallback(command, evidence)
+            else:
+                system, prompt = self._prompt(tenant, command, evidence)
+                async def generate():
+                    return await self.model.complete(system, prompt)
+                answer = (await self.scheduler.run(tenant.tenant_id, generate)
+                          if self.scheduler is not None else await generate())
+                if not isinstance(answer, str) or not answer.strip():
+                    raise RuntimeError("Inference returned no answer")
+                status = "grounded" if command.product_id is not None else "conversation"
+            self.sessions.append(tenant.tenant_id, command.session_id, command.message, answer)
+            return ChatResult(command.session_id, status, answer, sources)
+
+    async def stream(self, tenant: TenantContext, command: ChatCommand) -> AsyncIterator[dict]:
+        """Yield domain events; Gateway alone chooses SSE framing.
+
+        Only completed responses are committed to session state. Cancellation
+        discards partial messages and releases the inference permit.
+        """
+        async with self._session_lock(tenant.tenant_id, command.session_id):
+            evidence, sources = self._prepare(tenant, command)
+            status = "grounded" if command.product_id is not None else "conversation"
+            if (command.product_id is not None and not evidence) or self.model is None:
+                answer, status = self._fallback(command, evidence)
+                yield {"event": "delta", "data": {"text": answer}}
+            else:
+                system, prompt = self._prompt(tenant, command, evidence)
+                fragments: list[str] = []
+                queue: asyncio.Queue = asyncio.Queue(maxsize=16)
+                terminal = object()
+
+                async def produce():
+                    try:
+                        async def generate():
+                            streaming = getattr(self.model, "stream", None)
+                            if streaming is None:
+                                text = await self.model.complete(system, prompt)
+                                await queue.put(text)
+                            else:
+                                async for text in streaming(system, prompt):
+                                    await queue.put(text)
+                        if self.scheduler:
+                            await self.scheduler.run(tenant.tenant_id, generate)
+                        else:
+                            await generate()
+                    except Exception as exc:
+                        await queue.put(exc)
+                    finally:
+                        await queue.put(terminal)
+
+                task = asyncio.create_task(produce())
+                try:
+                    while True:
+                        item = await queue.get()
+                        if item is terminal:
+                            break
+                        if isinstance(item, Exception):
+                            raise item
+                        if not isinstance(item, str):
+                            raise RuntimeError("Model returned non-text stream")
+                        if item:
+                            fragments.append(item)
+                            yield {"event": "delta", "data": {"text": item}}
+                finally:
+                    if not task.done():
+                        task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
+                answer = "".join(fragments)
+                if not answer.strip():
+                    raise RuntimeError("Inference returned no answer")
+            self.sessions.append(tenant.tenant_id, command.session_id, command.message, answer)
+            yield {"event": "done", "data": {
+                "session_id": command.session_id, "status": status,
+                "sources": [{"id": s.id, "source": s.source, "product_id": s.product_id} for s in sources],
+            }}
