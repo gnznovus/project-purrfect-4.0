@@ -7,7 +7,7 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 - **Gateway:** FastAPI + pluggable client verification, expiring tenant-bound session tickets, JSON and SSE endpoints.
 - **Core:** framework-independent conversation, approved Sophia retrieval and inference.
 - **State:** in-memory/SQLite for local development; optional Redis shared session history and cross-worker serialization.
-- **Inference:** tenant-fair **per-process** queue/scheduler with Ollama adapter.
+- **Inference:** tenant-fair local queue plus optional Redis-backed global model capacity (when Ollama and Redis are enabled).
 - **Retrieval:** revision-aware per-process evidence cache.
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
@@ -49,7 +49,19 @@ python -m purrfect
 
 When enabled, all instances must share the same Redis instance, namespace, and session ticket signing keys. Redis stores a bounded per-tenant/per-session history, expires inactive sessions after `PURR_SESSION_IDLE_TTL` seconds, and serializes requests on a session across workers. A renewable per-session lease lets only its current owner write the final turn: an expired or superseded lease **cannot commit** stale answers. If a session is busy beyond `PURR_SESSION_WAIT_SECONDS`, Purr returns HTTP 503 (stream clients receive a terminal `error` event after headers). Broken Redis access fails the request instead of falling back to isolated state.
 
-**Important limitations:** This is a single-Redis-primary lease model and not distributed consensus across asynchronous Redis failovers. It does not guarantee exactly-once replies or inference cancellation at a remote model. The inference scheduler is **still per-process**; do not run multiple inference-capable Gateway workers against one constrained model until global inference admission is added. Multi-worker load tests, Redis failover recovery, credential and visitor identity integration, request idempotency, and production secret management remain required.
+### Global inference admission
+
+With `PURR_REDIS_URL` and `PURR_MODEL_BACKEND=ollama`, Purr additionally enforces Redis-backed **global active inference permits** across all worker processes sharing the same namespace. The existing per-process fair scheduler runs first; the global gate applies a concurrency cap and per-tenant active-model cap. Redis Lua operations acquire, renew and release expiring permits atomically; failed Redis calls fail closed.
+
+Configure the same limits in every worker:
+- `PURR_GLOBAL_INFERENCE_SLOTS` — total active model permits across workers (default 1).
+- `PURR_GLOBAL_TENANT_SLOTS` — active permits per tenant (default 1).
+- `PURR_INFERENCE_LEASE_SECONDS` — renewable permit lease (default 30s).
+- `PURR_GLOBAL_INFERENCE_WAIT_SECONDS` — global admission wait timeout (default 5s).
+
+**This is a capacity gate, not globally fair distributed queuing.** Local tenant fairness still applies per worker; globally, workers poll for free permits with a bounded timeout. A lost permit cancels local work and rejects the response, but Redis cannot forcibly stop already-dispatched inference inside an external model process. Do not claim strict global compute exclusivity under Redis failover or a stalled process; validate with the actual inference backend before production. Model pools should use dedicated Redis namespaces and consistent config.
+
+**Important limitations:** This is a single-Redis-primary lease model and not distributed consensus across asynchronous Redis failovers. It does not guarantee exactly-once replies or inference cancellation at a remote model. Global inference admission is implemented as an optional Redis primary capacity gate, but cross-worker scheduling fairness, Redis failover safety, and model-runtime fencing are not guaranteed. Multi-worker load tests, Redis failover recovery, credential and visitor identity integration, request idempotency, and production secret management remain required.
 
 The Redis integration tests run against a dedicated Redis test service in GitHub CI. For local integration tests, run a disposable Redis instance, set `PURR_TEST_REDIS_URL` to its isolated database, and run `python -m pytest`. Tests flush that test database.
 
