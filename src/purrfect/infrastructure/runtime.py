@@ -1,10 +1,11 @@
-"""Composition root: gateway configuration is independent of Purr Core."""
+"""Composition root: the public gateway remains independent of domain storage."""
 import os
 from purrfect.core.service import PurrCore
 from purrfect.gateway.app import create_app
 from purrfect.gateway.auth import CredentialRegistry
 from purrfect.infrastructure.cache import RetrievalCache
 from purrfect.infrastructure.scheduler import FairInferenceScheduler
+from purrfect.infrastructure.sessions import MemorySessions, SQLiteSessions
 from purrfect.ollama import OllamaModel
 from purrfect.sophira_storage import DurableSophira
 
@@ -27,7 +28,10 @@ def build_app():
         max_waiting_per_tenant=int(os.getenv("PURR_TENANT_QUEUE_LIMIT", "2")),
         queue_timeout=float(os.getenv("PURR_QUEUE_TIMEOUT", "5")),
     )
+    session_db = os.getenv("PURR_SESSION_DB", "./purr-sessions.db")
+    sessions = (SQLiteSessions(session_db, history_limit=int(os.getenv("PURR_HISTORY_LIMIT", "6")))
+                if session_db else MemorySessions())
     core = PurrCore(catalog=DurableSophira(path) if path else None,
-                    model=model, scheduler=scheduler,
+                    model=model, scheduler=scheduler, sessions=sessions,
                     evidence_cache=RetrievalCache(int(os.getenv("PURR_RETRIEVAL_CACHE_SIZE", "512"))))
     return create_app(core, registry)
