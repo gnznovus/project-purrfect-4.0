@@ -2,6 +2,14 @@
 
 This is a separate **operator-only webapp**, not an extension of Purr Core and not a public client widget.
 
+## Windows quick start (PowerShell)
+
+From the repository root, run `.\\setup-local.ps1` once. This uses `py -3.14` to create a project-local virtual environment, installs dependencies, then initializes `.env` only when missing. It never overwrites existing credentials.
+
+Run `.\\start-gateway.ps1` and `.\\start-console.ps1` in **separate terminals**. Both call their own project-local Python directly; no virtual environment activation or PowerShell environment variables are needed. The Console is available at `http://127.0.0.1:8775`.
+
+If PowerShell execution policy blocks local scripts, use `.\\.venv\\Scripts\\python.exe -m purrfect` and `.\\.venv\\Scripts\\python.exe -m purrfect.operations` directly (in separate terminals). Neither requires activation.
+
 ## Preferred setup — Git-ignored .env
 
 From the repository checkout, initialize the project once:
