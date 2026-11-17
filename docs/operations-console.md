@@ -2,7 +2,13 @@
 
 This is a separate **operator-only webapp**, not an extension of Purr Core and not a public client widget.
 
-## Single-command supervisor (Windows development only)
+## Single CLI for Windows development
+
+From the repository root, run `.\\purrfect.init.cmd` once. It installs the project in a Python 3.14 virtual environment, prepares the private `.env`, and registers a user-level CLI. Open a **new terminal** afterward and run `purrfect start` to launch the Gateway and Console in the background. `purrfect status`, `purrfect restart`, and `purrfect stop` manage the same supervisor. `purrfect init` preserves existing credentials.
+
+The CLI shim lives in `%LOCALAPPDATA%\\Purrfect\\bin` and PATH is updated for the current Windows user only. Production mode disables dev initialization and supervisor commands. See the README for setup details and foreground debugging alternatives.
+
+## Legacy command wrappers (still available)
 
 After a new checkout, run `purrfect.init` (or `.\\purrfect.init.cmd`) once. It creates the project's Python 3.14 `.venv`, installs dev dependencies and initializes the private `.env`. Running it again does **not** rotate or overwrite secrets.
 

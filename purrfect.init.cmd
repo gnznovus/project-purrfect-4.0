@@ -26,10 +26,16 @@ if errorlevel 1 (
   exit /b 1
 )
 "%PYTHON%" -m purrfect.dev.supervisor init
+if errorlevel 1 (
+  echo Development initialization refused or failed.
+  popd
+  exit /b 2
+)
+powershell.exe -NoProfile -File "%ROOT%scripts\install-cli.ps1"
 set "EXIT_CODE=%ERRORLEVEL%"
 if "%EXIT_CODE%"=="0" (
   echo.
-  echo Purr initialized. Run purrfect.start and purrfect.status.
+  echo Purr initialized. Open a NEW terminal, then run: purrfect start
 )
 popd
 exit /b %EXIT_CODE%
