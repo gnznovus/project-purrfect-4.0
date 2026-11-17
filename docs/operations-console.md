@@ -2,24 +2,25 @@
 
 This is a separate **operator-only webapp**, not an extension of Purr Core and not a public client widget.
 
-## Preferred setup — persistent local JSON
+## Preferred setup — Git-ignored .env
 
-From the repository checkout, run once:
+From the repository checkout, initialize the project once:
 
 ```powershell
+python -m pip install -e ".[dev]"
 python -m purrfect.config init
 ```
 
-This creates `config/local.json` with fresh random signing, Gateway, monitoring, and Console credentials, cross-linked automatically. **The file is ignored by Git and never overwritten by repeated initialization.** You can edit values later in a regular editor. Do not commit or share it. See `config/local.example.json` for the schema (non-secret placeholders only).
+The initializer writes a private `.env` containing matching Gateway client and Console service credentials, distinct monitoring and operator secrets, and default local ports. It **never overwrites an existing `.env`**. If an older `config/local.json` exists, initialization migrates its original values without rotating secrets. After verifying the new `.env`, remove the old JSON file manually. The Git-tracked `.env.example` contains only placeholders.
 
-Then launch the services in separate terminals from the repository checkout:
+Then launch the two services from the repository in separate terminals:
 
 ```powershell
 python -m purrfect
 python -m purrfect.operations
 ```
 
-The Console starts at `http://127.0.0.1:8775`. Enter the value of `PURR_OPERATIONS_TOKEN` stored in `config/local.json`. Environment settings can still override matching config values for deployment, but are not required for local use. By default this file is resolved relative to the source checkout, not the terminal's current directory.
+Open `http://127.0.0.1:8775`. The Console login token is `PURR_OPERATIONS_TOKEN` from `.env`. Editing `.env` is enough to update settings for the next process start; **restart the affected service after edits**. Process environment variables can override the file for deployment, but are not needed in local PowerShell.
 
 ## Manual environment-based launch (optional)
 

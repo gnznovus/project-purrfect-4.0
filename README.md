@@ -13,9 +13,11 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
-## Persistent local configuration (recommended)
+## Persistent local .env configuration (recommended)
 
-Run `python -m purrfect.config init` once after `python -m pip install -e ".[dev]"`. This creates `config/local.json` with randomly generated Gateway, Console and monitoring credentials. It is excluded from Git; only `config/local.example.json` is tracked. From then on, launch Gateway using `python -m purrfect` and Console using `python -m purrfect.operations` in separate terminals—no environment-variable setup needed. Environment values override local config if explicitly provided. Do not share local config or deploy it as a public asset.
+Install once with `python -m pip install -e ".[dev]"`, then run `python -m purrfect.config init`. The initializer creates a private, Git-ignored `.env` at the project root with cryptographically random signing, Gateway, Console and monitoring credentials. If the previous `config/local.json` exists, initialization **migrates its existing credentials** instead of rotating them. It never overwrites an existing `.env`; review the new file, then delete your old JSON manually.
+
+`.env.example` is tracked as a safe, non-secret template. Both Gateway and Console load the project's `.env` automatically, without manually setting PowerShell variables. Explicit process environment variables take precedence for deployment. Use `python -m purrfect` and `python -m purrfect.operations` in separate terminals. Treat the `.env` file as a secret; Git-ignore is not encryption.
 
 ## Purr Operations Console (V2.9)
 
@@ -25,11 +27,12 @@ A separate operator-only webapp offers Gateway health, metrics, bounded live inf
 
 ```powershell
 python -m pip install -e ".[dev]"
+python -m purrfect.config init
 python -m pytest
-$env:PURR_CLIENTS_JSON = '[{"token":"local-development-token-12345","tenant_id":"dev","products":["demo"]}]'
-$env:PURR_SESSION_SIGNING_KEY = "local-only-replace-with-32-plus-random-bytes"
 python -m purrfect
 ```
+
+Start the Console independently with `python -m purrfect.operations`. For API checks, retrieve the `PURR_CLIENTS_JSON` token from your private `.env` rather than hardcoding a dummy client credential.
 
 Create an authenticated session before either chat endpoint:
 
@@ -45,7 +48,7 @@ The Gateway also supports POST `/v1/chat/stream` with SSE events `delta`, `done`
 
 ## Redis shared session coordination (optional)
 
-Install `python -m pip install -e ".[redis]"` when not using the development extras. Set `PURR_REDIS_URL` to enable shared sessions instead of SQLite; startup fails if Redis cannot be reached (no silent fallback).
+Install `python -m pip install -e ".[redis]"` when not using the development extras. Configure `PURR_REDIS_URL` in `.env` to enable shared sessions instead of SQLite; startup fails if Redis cannot be reached (no silent fallback).
 
 ```powershell
 $env:PURR_REDIS_URL = "redis://127.0.0.1:6379/0"
