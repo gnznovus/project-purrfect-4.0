@@ -18,8 +18,7 @@ class OllamaModel:
         payload = {
             "model": self.model,
             "stream": False,
-            "format": "json",
-            "options": {"temperature": 0},
+            "options": {"temperature": 0.3},
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},

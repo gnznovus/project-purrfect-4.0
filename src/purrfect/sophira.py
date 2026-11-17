@@ -131,7 +131,7 @@ class SophiraClient(Protocol):
 class SophiraCatalog:
     """In-memory approved revisions used to exercise the standalone boundary.
 
-    publish_approved is a trusted operator/fixture entrypoint, never a Child
+    publish_approved is a trusted operator/fixture entrypoint, never a client
     endpoint. A real Sophira service must enforce authentication and approval.
     """
     def __init__(self):
