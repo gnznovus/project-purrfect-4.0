@@ -4,6 +4,7 @@ import re
 import weakref
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
+from contextlib import AbstractAsyncContextManager
 from threading import RLock
 from typing import Protocol, TypeVar
 
@@ -38,6 +39,10 @@ class SessionStore(Protocol):
     def append(self, tenant: str, session: str, question: str, answer: str) -> None: ...
 
 
+class SessionCoordinator(Protocol):
+    def lock(self, tenant: str, session: str) -> AbstractAsyncContextManager[None]: ...
+
+
 class AccessDenied(Exception):
     """A verified tenant lacks access to this product."""
 
@@ -64,10 +69,13 @@ class PurrCore:
     scheduler: InferenceScheduler | None = None
     evidence_cache: EvidenceCache | None = None
     sessions: SessionStore = field(default_factory=MemorySessions)
+    session_coordinator: SessionCoordinator | None = None
     _locks: weakref.WeakValueDictionary = field(default_factory=weakref.WeakValueDictionary, init=False)
     _guard: RLock = field(default_factory=RLock, init=False)
 
-    def _session_lock(self, tenant: str, session: str) -> asyncio.Lock:
+    def _session_lock(self, tenant: str, session: str) -> AbstractAsyncContextManager:
+        if self.session_coordinator is not None:
+            return self.session_coordinator.lock(tenant, session)
         key = (tenant, session)
         with self._guard:
             lock = self._locks.get(key)
@@ -99,8 +107,8 @@ class PurrCore:
         sources = tuple(Source(item.id, item.source, command.product_id) for item in evidence)
         return evidence, sources
 
-    def _prompt(self, tenant: TenantContext, command: ChatCommand, evidence):
-        previous = self.sessions.read(tenant.tenant_id, command.session_id)
+    async def _prompt(self, tenant: TenantContext, command: ChatCommand, evidence):
+        previous = await asyncio.to_thread(self.sessions.read, tenant.tenant_id, command.session_id)
         citations = "\n".join(f"[{item.id}] {item.content}" for item in evidence)
         history = "\n".join(f"User: {question}\nPurr: {reply}" for question, reply in previous)
         system = ("You are Purr, a natural, concise product assistant. "
@@ -124,7 +132,7 @@ class PurrCore:
             if command.product_id is not None and not evidence or self.model is None:
                 answer, status = self._fallback(command, evidence)
             else:
-                system, prompt = self._prompt(tenant, command, evidence)
+                system, prompt = await self._prompt(tenant, command, evidence)
                 async def generate():
                     return await self.model.complete(system, prompt)
                 answer = (await self.scheduler.run(tenant.tenant_id, generate)
@@ -132,7 +140,7 @@ class PurrCore:
                 if not isinstance(answer, str) or not answer.strip():
                     raise RuntimeError("Inference returned no answer")
                 status = "grounded" if command.product_id is not None else "conversation"
-            self.sessions.append(tenant.tenant_id, command.session_id, command.message, answer)
+            await asyncio.to_thread(self.sessions.append, tenant.tenant_id, command.session_id, command.message, answer)
             return ChatResult(command.session_id, status, answer, sources)
 
     async def stream(self, tenant: TenantContext, command: ChatCommand) -> AsyncIterator[dict]:
@@ -148,7 +156,7 @@ class PurrCore:
                 answer, status = self._fallback(command, evidence)
                 yield {"event": "delta", "data": {"text": answer}}
             else:
-                system, prompt = self._prompt(tenant, command, evidence)
+                system, prompt = await self._prompt(tenant, command, evidence)
                 fragments: list[str] = []
                 queue: asyncio.Queue = asyncio.Queue(maxsize=16)
                 terminal = object()
@@ -192,7 +200,7 @@ class PurrCore:
                 answer = "".join(fragments)
                 if not answer.strip():
                     raise RuntimeError("Inference returned no answer")
-            self.sessions.append(tenant.tenant_id, command.session_id, command.message, answer)
+            await asyncio.to_thread(self.sessions.append, tenant.tenant_id, command.session_id, command.message, answer)
             yield {"event": "done", "data": {
                 "session_id": command.session_id, "status": status,
                 "sources": [{"id": s.id, "source": s.source, "product_id": s.product_id} for s in sources],
