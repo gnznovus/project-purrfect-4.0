@@ -89,3 +89,12 @@ def test_invalid_legacy_does_not_create_dotenv(tmp_path):
     with pytest.raises(ValueError):
         initialize(target, legacy_path=legacy)
     assert not target.exists()
+
+
+def test_dev_bootstrap_refuses_explicit_production_mode(tmp_path, monkeypatch):
+    from purrfect.config import initialize
+    monkeypatch.setenv("PURR_ENV", "production")
+    path = tmp_path / ".env"
+    with pytest.raises(RuntimeError, match="disabled"):
+        initialize(path, legacy_path=tmp_path / "none.json")
+    assert not path.exists()

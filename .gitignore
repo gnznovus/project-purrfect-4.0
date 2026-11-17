@@ -11,3 +11,4 @@ __pycache__/
 !.env.example
 /config/local.json
 /config/local.*.json
+.purrfect/

@@ -2,6 +2,23 @@
 
 This is a separate **operator-only webapp**, not an extension of Purr Core and not a public client widget.
 
+## Single-command supervisor (Windows development only)
+
+After a new checkout, run `purrfect.init` (or `.\\purrfect.init.cmd`) once. It creates the project's Python 3.14 `.venv`, installs dev dependencies and initializes the private `.env`. Running it again does **not** rotate or overwrite secrets.
+
+Daily commands:
+
+```powershell
+.\\purrfect.start.cmd
+.\\purrfect.status.cmd
+.\\purrfect.restart.cmd
+.\\purrfect.stop.cmd
+```
+
+`start` detaches a supervisor which owns the local Gateway and Console child processes and writes local logs under `.purrfect/`. You may close the terminal afterward; use `stop` for clean shutdown. The supervisor never kills unrelated port occupants.
+
+Set `PURR_ENV=production` in the actual process environment or `.env` to disable development initialization and supervisor commands. Production process management and credentials are handled separately. The Windows supervisor does not install or start Ollama or Redis, and health readiness currently checks local listener ports, not authenticated application probes.
+
 ## Windows quick start (PowerShell)
 
 From the repository root, run `.\\setup-local.ps1` once. This uses `py -3.14` to create a project-local virtual environment, installs dependencies, then initializes `.env` only when missing. It never overwrites existing credentials.

@@ -13,6 +13,25 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
+## Single-command local development supervisor (Windows)
+
+Run `purrfect.init` **once** from the repository root. It creates a Python 3.14 `.venv` if missing, installs development dependencies, and generates missing credentials in the Git-ignored `.env`; existing credentials are preserved. The old `.\\setup-local.ps1` delegates to the same bootstrap.
+
+Then use the following commands from the repository root in PowerShell or CMD:
+
+```powershell
+.\\purrfect.start.cmd
+.\\purrfect.status.cmd
+.\\purrfect.restart.cmd
+.\\purrfect.stop.cmd
+```
+
+With the repository folder on `PATH`, the commands may also be invoked as `purrfect.start`, `purrfect.status`, `purrfect.restart`, and `purrfect.stop`. Without that PATH entry, run `.\\purrfect.start` etc. in PowerShell (or use the explicit `.cmd` suffix).
+
+`start` launches Gateway (:8765) and Operations Console (:8775) in a detached supervisor process, waits for their configured local TCP ports, then returns control to the terminal. `stop` gracefully shuts down **only supervised children**, `status` reports ownership and health, and `restart` performs stop + start. Logs and process metadata live in ignored `.purrfect/`. `start` refuses occupied ports rather than attaching to foreign servers. Ports are configurable in `.env`; Ollama/Redis are **checked through runtime connection behavior**, not automatically installed or launched.
+
+**Development-only boundary:** `PURR_ENV=development` is set in freshly generated `.env`. The supervisor and dev init commands refuse execution when `PURR_ENV=production` (or another non-development mode). The production Gateway and Console remain deployed through your own process manager. The local supervisor supports Windows only and is not a production service manager.
+
 ## Windows local development — no activation needed
 
 From a PowerShell terminal in the repository, run once:
@@ -23,7 +42,7 @@ From a PowerShell terminal in the repository, run once:
 
 This creates a Python 3.14 `.venv` (using the Windows Python launcher `py -3.14`), installs the project, and generates or migrates a Git-ignored `.env` if it does not exist. Existing virtual environments and credentials are preserved. If Python 3.14 isn't installed, install it first. The setup script never installs Python itself.
 
-For daily use, open two PowerShell terminals:
+Alternatively, for direct foreground debugging, open two PowerShell terminals:
 
 ```powershell
 # Gateway — terminal 1
