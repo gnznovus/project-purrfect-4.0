@@ -9,6 +9,7 @@ from purrfect.gateway.auth import ClientVerifier
 from purrfect.gateway.schemas import ChatRequest, ChatResponse, SessionResponse
 from purrfect.gateway.session_tokens import InvalidSession, SessionTickets
 from purrfect.infrastructure.scheduler import SchedulerOverloaded, SchedulerTimeout
+from purrfect.infrastructure.coordination_errors import GlobalInferenceLeaseLost, SessionBusy, SessionLeaseLost
 
 
 def _translate(exc: Exception) -> HTTPException:
@@ -16,8 +17,10 @@ def _translate(exc: Exception) -> HTTPException:
         return HTTPException(403, detail="Product not authorized")
     if isinstance(exc, SchedulerOverloaded):
         return HTTPException(429, detail="Inference queue is full", headers={"Retry-After": "2"})
-    if isinstance(exc, SchedulerTimeout):
+    if isinstance(exc, (SchedulerTimeout, SessionBusy)):
         return HTTPException(503, detail="Inference queue timed out", headers={"Retry-After": "2"})
+    if isinstance(exc, (GlobalInferenceLeaseLost, SessionLeaseLost)):
+        return HTTPException(503, detail="Distributed coordination unavailable")
     if isinstance(exc, ValueError):
         return HTTPException(400, detail=str(exc))
     return HTTPException(503, detail="Purr Core is temporarily unavailable")

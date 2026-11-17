@@ -59,6 +59,16 @@ def build_app():
             lease_seconds=int(os.getenv("PURR_SESSION_LEASE_SECONDS", "30")),
             wait_seconds=float(os.getenv("PURR_SESSION_WAIT_SECONDS", "5")),
         )
+        if model is not None:
+            from purrfect.infrastructure.redis_inference import RedisInferenceScheduler
+            scheduler = RedisInferenceScheduler(
+                client, namespace=namespace,
+                global_slots=int(os.getenv("PURR_GLOBAL_INFERENCE_SLOTS", "1")),
+                per_tenant_slots=int(os.getenv("PURR_GLOBAL_TENANT_SLOTS", "1")),
+                lease_seconds=int(os.getenv("PURR_INFERENCE_LEASE_SECONDS", "30")),
+                wait_seconds=float(os.getenv("PURR_GLOBAL_INFERENCE_WAIT_SECONDS", "5")),
+                local_scheduler=scheduler,
+            )
     else:
         session_db = os.getenv("PURR_SESSION_DB", "./purr-sessions.db")
         sessions = (SQLiteSessions(session_db, history_limit=int(os.getenv("PURR_HISTORY_LIMIT", "6")))

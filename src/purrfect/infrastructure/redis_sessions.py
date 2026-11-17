@@ -14,19 +14,12 @@ from contextlib import asynccontextmanager
 
 import redis
 from redis.exceptions import RedisError
+from purrfect.infrastructure.coordination_errors import SessionBusy, SessionLeaseLost
 
 
 _lease_token: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "purr_redis_session_lease", default=None,
 )
-
-
-class SessionBusy(Exception):
-    """Session is already being processed in another worker."""
-
-
-class SessionLeaseLost(Exception):
-    """Distributed session lease expired or was replaced."""
 
 
 def _key(namespace: str, tenant: str, session: str) -> str:
