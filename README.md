@@ -1,20 +1,18 @@
 # Purr — independent Gateway and Core
 
-Purr is a shared, multi-tenant AI provider for natural conversation and Sophia-approved product guidance. Gateway owns evolving authentication and public contracts; Core remains independent of HTTP frameworks.
+Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. Gateway owns external authentication and API contracts; Core owns conversational behavior; infrastructure handles inference and state.
 
-## Architecture
+## Foundation
 
-- `purrfect.gateway` — FastAPI v1 API, pluggable `ClientVerifier` boundary, trusted session credentials, JSON/SSE.
-- `purrfect.core` — framework-independent product guidance, conversation and streaming.
-- `purrfect.infrastructure.scheduler` — tenant-fair, cancelable per-process inference admission.
-- `purrfect.infrastructure.cache` — revision-aware tenant-scoped retrieval evidence caching.
-- `purrfect.infrastructure.sessions` — memory/SQLite state; tenant-isolated.
-- `purrfect.ollama` — native incremental inference.
-- `purrfect.sophira*` — approved knowledge.
+- **Gateway:** FastAPI + pluggable client verification, expiring tenant-bound session tickets, JSON and SSE endpoints.
+- **Core:** framework-independent conversation, approved Sophia retrieval and inference.
+- **State:** in-memory/SQLite for local development; optional Redis shared session history and cross-worker serialization.
+- **Inference:** tenant-fair **per-process** queue/scheduler with Ollama adapter.
+- **Retrieval:** revision-aware per-process evidence cache.
 
-The project does not bundle WordPress, the Assistant UI, Docker, or a production identity provider.
+WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
-## Local development — PowerShell, Python 3.14+
+## Local development (PowerShell, Python 3.14+)
 
 ```powershell
 python -m pip install -e ".[dev]"
@@ -24,26 +22,7 @@ $env:PURR_SESSION_SIGNING_KEY = "local-only-replace-with-32-plus-random-bytes"
 python -m purrfect
 ```
 
-### Application credential lifecycle (development implementation)
-
-The Gateway authenticates an Assistant backend (tenant application identity) using a replaceable `ClientVerifier`. The bundled `CredentialRegistry` is static configuration **for development**, not an issuer or external identity provider. Configured secrets are hashed in memory and compared using constant-time digests.
-
-The server-side `PURR_CLIENTS_JSON` configuration supports `token`, `tenant_id`, `products`, and optional `not_before`, `expires_at` (Unix seconds) and `disabled`. Multiple distinct credentials can be active for the same tenant to allow overlap during rotation:
-
-```json
-[
-  {"token":"old-private-key-at-least-16","tenant_id":"hotel","products":["booking"]},
-  {"token":"new-private-key-at-least-16","tenant_id":"hotel","products":["booking"]}
-]
-```
-
-Deploy a configuration with both keys; migrate the caller; then deploy a configuration with the old key `disabled` or removed. This needs a process reload/restart: **there is no online management endpoint or immediate centralized revocation**. `not_before` and `expires_at` are verified for every request, but the list of credentials remains a static snapshot. Do not place any application secret in a browser, public repository, URL, or telemetry.
-
-The Gateway can instead receive an external OAuth/OIDC verifier or other client-identity provider adapter via `create_app(core, verifier, tickets)`. That adapter must independently validate issuer, audience, signature, expiry, tenant binding and product grants as applicable. **No concrete external verifier is implemented or chosen yet.** Core only sees normalized tenant grants.
-
-### Session credentials and signing key rollover
-
-The Assistant backend authenticates with its application credential and calls `POST /v1/sessions`. The Gateway returns `session_id`, `session_token` and `expires_at`; chat calls then require the tenant credential and `X-Purr-Session` header. Client-supplied `session_id` must match the signed ticket if present. This ticket establishes *anonymous session possession*, not verified end-user identity.
+Create an authenticated session before either chat endpoint:
 
 ```powershell
 $headers = @{ Authorization = "Bearer local-development-token-12345" }
@@ -53,26 +32,35 @@ $body = @{ message = "Hi!" } | ConvertTo-Json
 Invoke-RestMethod http://127.0.0.1:8765/v1/chat -Method Post -Headers $headers -ContentType "application/json" -Body $body
 ```
 
-Use `PURR_SESSION_SIGNING_KEY` for **new tickets**. Optional `PURR_SESSION_PREVIOUS_KEYS` is a JSON array of earlier signing keys still accepted for verification. Key-rollover sequence: deploy new primary with old key listed as previous; let Assistant clients obtain new tickets; after old tickets expire, remove the previous key. Removing a previous key rejects its outstanding tickets immediately at that process. Maximum three previous keys; all signing keys require at least 32 UTF-8 bytes. Protect signing keys in your secrets manager and configure the same keys on all participating Gateway instances. The Gateway does not have per-ticket revocation or refresh yet.
+The Gateway also supports POST `/v1/chat/stream` with SSE events `delta`, `done`, and `error`. Native Ollama chunks are passed through without waiting for a complete answer.
 
-## API
+## Redis shared session coordination (optional)
 
-- `GET /v1/health` — authenticated.
-- `POST /v1/sessions` — authenticated session issuance.
-- `POST /v1/chat` — authenticated chat, signed session ticket required.
-- `POST /v1/chat/stream` — authenticated POST SSE with `delta`, `done`, and terminal `error` events.
+Install `python -m pip install -e ".[redis]"` when not using the development extras. Set `PURR_REDIS_URL` to enable shared sessions instead of SQLite; startup fails if Redis cannot be reached (no silent fallback).
 
-Product packages are tenant namespaced in Sophia as `tenant_id/product_id` (for example `dev/demo`). Only approved knowledge is used.
+```powershell
+$env:PURR_REDIS_URL = "redis://127.0.0.1:6379/0"
+$env:PURR_REDIS_NAMESPACE = "purr"
+$env:PURR_SESSION_IDLE_TTL = "604800"
+$env:PURR_SESSION_LEASE_SECONDS = "30"
+$env:PURR_SESSION_WAIT_SECONDS = "5"
+python -m purrfect
+```
 
-## Environment
+When enabled, all instances must share the same Redis instance, namespace, and session ticket signing keys. Redis stores a bounded per-tenant/per-session history, expires inactive sessions after `PURR_SESSION_IDLE_TTL` seconds, and serializes requests on a session across workers. A renewable per-session lease lets only its current owner write the final turn: an expired or superseded lease **cannot commit** stale answers. If a session is busy beyond `PURR_SESSION_WAIT_SECONDS`, Purr returns HTTP 503 (stream clients receive a terminal `error` event after headers). Broken Redis access fails the request instead of falling back to isolated state.
 
-- `PURR_CLIENTS_JSON`: required static development client credential list.
-- `PURR_SESSION_SIGNING_KEY`: required new-ticket signing key.
-- `PURR_SESSION_PREVIOUS_KEYS`: JSON list of accepted old keys; default `[]`.
-- `PURR_SESSION_TTL`: ticket lifetime, default 86400 seconds.
-- `PURR_MODEL_BACKEND`: deterministic or ollama.
-- `PURR_OLLAMA_MODEL`, `PURR_OLLAMA_URL`, `PURR_SOPHIA_DB`, `PURR_SESSION_DB`, `PURR_HISTORY_LIMIT`, `PURR_INFERENCE_CONCURRENCY`, `PURR_QUEUE_LIMIT`, `PURR_TENANT_QUEUE_LIMIT`, `PURR_QUEUE_TIMEOUT`, `PURR_RETRIEVAL_CACHE_SIZE`, `PURR_HOST`, `PURR_PORT`.
+**Important limitations:** This is a single-Redis-primary lease model and not distributed consensus across asynchronous Redis failovers. It does not guarantee exactly-once replies or inference cancellation at a remote model. The inference scheduler is **still per-process**; do not run multiple inference-capable Gateway workers against one constrained model until global inference admission is added. Multi-worker load tests, Redis failover recovery, credential and visitor identity integration, request idempotency, and production secret management remain required.
 
-## Remaining production gaps
+The Redis integration tests run against a dedicated Redis test service in GitHub CI. For local integration tests, run a disposable Redis instance, set `PURR_TEST_REDIS_URL` to its isolated database, and run `python -m pytest`. Tests flush that test database.
 
-This remains a **development foundation**. Identity verification is replaceable but a real external identity source is not connected. Client grants and revocation changes require process reload. Anonymous visitors remain the Assistant backend's responsibility; Gateway possession tickets alone cannot authenticate a human. No per-session revocation, streaming replay, multi-worker coordinated session locking, shared distributed queue, global rate limiting, or retention cleanup. SQLite is single-host state and inference efficiency is unbenchmarked. Keep a single API process until coordinated deployment is validated.
+## Other configuration
+
+- `PURR_CLIENTS_JSON` — trusted static development client credentials with optional expiry/disable controls.
+- `PURR_SESSION_SIGNING_KEY`, `PURR_SESSION_PREVIOUS_KEYS`, `PURR_SESSION_TTL` — signing key and rollover settings.
+- `PURR_SESSION_DB` — SQLite path when Redis is disabled; blank for bounded memory only.
+- `PURR_MODEL_BACKEND` — deterministic or ollama.
+- `PURR_OLLAMA_URL`, `PURR_OLLAMA_MODEL`, `PURR_SOPHIA_DB`.
+- `PURR_INFERENCE_CONCURRENCY`, `PURR_QUEUE_LIMIT`, `PURR_TENANT_QUEUE_LIMIT`, `PURR_QUEUE_TIMEOUT`, `PURR_RETRIEVAL_CACHE_SIZE`.
+- `PURR_HISTORY_LIMIT`, `PURR_HOST`, `PURR_PORT`.
+
+The production authentication provider is not chosen. Client credentials authenticate the Assistant backend, but anonymous visitor identity and binding to its session ticket remain the Assistant backend's responsibility. There is no per-ticket revocation or centralized client-credential management. Redis does not make this a production-ready multi-node AI service on its own.
