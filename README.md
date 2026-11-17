@@ -13,6 +13,28 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
+## Windows local development — no activation needed
+
+From a PowerShell terminal in the repository, run once:
+
+```powershell
+.\setup-local.ps1
+```
+
+This creates a Python 3.14 `.venv` (using the Windows Python launcher `py -3.14`), installs the project, and generates or migrates a Git-ignored `.env` if it does not exist. Existing virtual environments and credentials are preserved. If Python 3.14 isn't installed, install it first. The setup script never installs Python itself.
+
+For daily use, open two PowerShell terminals:
+
+```powershell
+# Gateway — terminal 1
+.\start-gateway.ps1
+
+# Operations Console — terminal 2
+.\start-console.ps1
+```
+
+Both launchers resolve `.venv\\Scripts\\python.exe` relative to their own script directory and run from the repository root. No `Activate.ps1`, `$env:` configuration, or reliance on the system-default Python. Standard PowerShell execution policy still applies; if scripts are blocked, use the documented direct `.venv\\Scripts\\python.exe -m ...` commands rather than weakening machine-wide policy.
+
 ## Persistent local .env configuration (recommended)
 
 Install once with `python -m pip install -e ".[dev]"`, then run `python -m purrfect.config init`. The initializer creates a private, Git-ignored `.env` at the project root with cryptographically random signing, Gateway, Console and monitoring credentials. If the previous `config/local.json` exists, initialization **migrates its existing credentials** instead of rotating them. It never overwrites an existing `.env`; review the new file, then delete your old JSON manually.
