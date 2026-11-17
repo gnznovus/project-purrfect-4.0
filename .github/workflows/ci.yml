@@ -49,6 +49,15 @@ jobs:
             $gateway = Invoke-RestMethod 'http://127.0.0.1:8765/v1/health' -Headers @{ Authorization = 'Bearer invalid' } -SkipHttpErrorCheck
             if ($null -eq $gateway) { throw 'Gateway did not respond' }
           } finally {
+            Write-Host '--- Supervisor state ---'
+            if (Test-Path .purrfect/supervisor.json) { Get-Content .purrfect/supervisor.json }
+            foreach ($name in @('supervisor','gateway','console')) {
+              $log = ".purrfect/$name.log"
+              if (Test-Path $log) {
+                Write-Host "--- $name log ---"
+                Get-Content $log -Tail 60
+              }
+            }
             & $cmd stop
             if ($LASTEXITCODE -ne 0) { throw 'stop failed' }
           }
