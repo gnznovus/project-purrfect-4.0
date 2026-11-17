@@ -1,14 +1,14 @@
-"""Durable Sophira catalog and site-local lease store.
+"""Durable Sophia approved-knowledge catalog.
 
-Local SQLite adapters exercise future independent deployment contracts.
-No unauthenticated publication route is exposed to WordPress or the chat API.
+Local SQLite storage for approved revisions.
+Publication remains restricted to the trusted operator CLI.
 """
 import json
 import sqlite3
 from pathlib import Path
 from threading import RLock
 
-from purrfect.sophira import KnowledgeItem, KnowledgePackage, KnowledgeCache, LocalSophiraClient, SophiraCatalog
+from purrfect.sophira import KnowledgeItem, KnowledgePackage, SophiraCatalog
 
 
 def encode(package: KnowledgePackage) -> str:
@@ -99,42 +99,6 @@ class DurableSophira(SophiraCatalog):
         with self._lock:
             self._refresh_from_db()
             return super().lease(product_id, product_version, revision)
-
-    def close(self):
-        self._db.close()
-
-
-class SiteLeaseStore:
-    """Per-site local cache; one site cannot clobber another's lease."""
-    def __init__(self, path: str | Path, site_id: str):
-        if not isinstance(site_id, str) or not site_id.strip():
-            raise ValueError("Site identity required")
-        self.site_id = site_id
-        self._db = sqlite3.connect(str(path))
-        self._db.execute("""CREATE TABLE IF NOT EXISTS local_leases (
-            site_id TEXT NOT NULL, product_id TEXT NOT NULL,
-            product_version TEXT NOT NULL, payload TEXT NOT NULL,
-            PRIMARY KEY(site_id, product_id, product_version))""")
-
-    def refresh(self, client: LocalSophiraClient, product_id: str, product_version: str) -> bool:
-        cache = KnowledgeCache(product_id, product_version)
-        before = self.get(product_id, product_version)
-        cache.current = before
-        if not cache.refresh(client):
-            return False
-        with self._db:
-            self._db.execute(
-                "INSERT OR REPLACE INTO local_leases VALUES (?, ?, ?, ?)",
-                (self.site_id, product_id, product_version, encode(cache.current)),
-            )
-        return True
-
-    def get(self, product_id: str, product_version: str) -> KnowledgePackage | None:
-        row = self._db.execute(
-            "SELECT payload FROM local_leases WHERE site_id=? AND product_id=? AND product_version=?",
-            (self.site_id, product_id, product_version),
-        ).fetchone()
-        return decode(row[0]) if row else None
 
     def close(self):
         self._db.close()
