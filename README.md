@@ -13,6 +13,10 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
+## Purr Operations Console (V2.9)
+
+A separate operator-only webapp offers Gateway health, metrics, bounded live inference benchmarks, persisted SQLite reports and reliability diagnostics. Start it independently with `python -m purrfect.operations` after configuring the operations and Gateway credentials. See [Operations Console setup and security](docs/operations-console.md). The Console does not add benchmark endpoints to the public Gateway or Purr Core.
+
 ## Local development (PowerShell, Python 3.14+)
 
 ```powershell
