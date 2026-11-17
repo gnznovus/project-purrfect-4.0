@@ -71,10 +71,12 @@ class RedisInferenceScheduler:
         lease_seconds: int = 30,
         wait_seconds: float = 5.0,
         local_scheduler: FairInferenceScheduler | None = None,
+        metrics=None,
     ):
         if (not namespace or global_slots < 1 or per_tenant_slots < 1
                 or per_tenant_slots > global_slots or lease_seconds < 3 or wait_seconds <= 0):
             raise ValueError("Invalid global inference limits")
+        self._metrics = metrics
         self._client = client
         self._key = f"{namespace}:inference:{{global}}:leases"
         self._slots = global_slots
@@ -106,7 +108,8 @@ class RedisInferenceScheduler:
         if not tenant or ":" in tenant:
             raise ValueError("Invalid tenant identifier for model admission")
         member = f"{tenant}:{secrets.token_urlsafe(24)}"
-        deadline = time.monotonic() + self._wait_seconds
+        started = time.monotonic()
+        deadline = started + self._wait_seconds
         while True:
             # Redis failures are propagated: never fall back to local admission.
             if await self._eval(
@@ -115,9 +118,13 @@ class RedisInferenceScheduler:
                 break
             left = deadline - time.monotonic()
             if left <= 0:
+                if self._metrics:
+                    self._metrics.observe("queue_global", "timeout", time.monotonic() - started, tenant=tenant)
                 raise SchedulerTimeout("Global inference capacity wait timed out")
             await asyncio.sleep(min(0.05, left))
 
+        if self._metrics:
+            self._metrics.observe('queue_global', 'ok', time.monotonic() - started, tenant=tenant)
         stop = asyncio.Event()
         lost = asyncio.Event()
         renew_task = asyncio.create_task(self._renew(member, stop, lost))
