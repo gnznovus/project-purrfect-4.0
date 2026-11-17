@@ -42,9 +42,9 @@ async def test_bounded_admission_and_release():
     with pytest.raises(HTTPException) as exc:
         await limiter.acquire()
     assert exc.value.status_code==429
-    limiter.release()
+    await limiter.release()
     await limiter.acquire()
-    limiter.release()
+    await limiter.release()
 
 @pytest.mark.asyncio
 async def test_waiting_request_times_out():
@@ -54,4 +54,4 @@ async def test_waiting_request_times_out():
     with pytest.raises(HTTPException) as exc:
         await limiter.acquire()
     assert exc.value.status_code==503
-    limiter.release()
+    await limiter.release()
