@@ -3,6 +3,8 @@
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
   let credential = "";
+  let devAutoAuth = false;
+  const authenticated = () => Boolean(credential || devAutoAuth);
   let selectedConcurrency = 1;
   let runs = [];
   const fmt = value => value == null ? "—" : Number(value).toLocaleString(undefined,{maximumFractionDigits:2});
@@ -15,12 +17,20 @@
       headers: {"Authorization":"Bearer "+credential,...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})},
       cache:"no-store"
     });
-    if (response.status===401) { lock(); throw new Error("Operator credential rejected"); }
+    if (response.status===401) { devAutoAuth=false; lock(); throw new Error("Operator credential rejected"); }
     const body = await response.json().catch(()=>({}));
     if (!response.ok) throw new Error(body.detail || "Console request failed");
     return body;
   }
-  function lock() { credential=""; $("#operatorToken").value=""; $("#authOverlay").classList.remove("hidden"); }
+  function lock() {
+    credential="";
+    $("#operatorToken").value="";
+    if (devAutoAuth) {
+      message("Local development auto-login is enabled. Disable PURR_OPERATIONS_DEV_AUTO_AUTH in .env to require a token.");
+      return;
+    }
+    $("#authOverlay").classList.remove("hidden");
+  }
   function navigate(name) {
     $$(".page").forEach(el=>el.classList.toggle("active",el.id==="page-"+name));
     $$(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.page===name));
@@ -74,7 +84,7 @@
     note.textContent="Process-local averages · All observed requests · "+data.series.reduce((v,x)=>v+x.errors,0)+" non-success events";
   }
   async function refreshOverview() {
-    if (!credential) return;
+    if (!authenticated()) return;
     try {
       const [overview,history,telemetry]=await Promise.all([api("/api/overview"),api("/api/runs"),api("/api/telemetry")]);
       runs=history.runs;
@@ -90,7 +100,7 @@
       $("#recentTable").innerHTML=reportRows(runs);
       plotTrend(runs);
       breakdown(telemetry);
-    } catch(e) { if (credential) message(e.message); }
+    } catch(e) { if (authenticated()) message(e.message); }
   }
   function resultHTML(report) {
     const percentage=report.samples.length?Math.round(100*report.successes/report.samples.length):0;
@@ -104,13 +114,13 @@
       '<div class="mini-bar '+(s.ok?'good':'')+'" style="height:'+(s.ok?Math.max(3,s.latency_ms*100/max):3)+'%" data-label="#'+s.number+': '+fmt(s.latency_ms)+'ms ('+escape(s.status)+')"></div>').join("")+'</div>';
   }
   async function refreshHistory() {
-    if (!credential) return;
+    if (!authenticated()) return;
     try {
       runs=(await api("/api/runs")).runs;
       $("#historyCount").textContent=runs.length+" RUNS";
       $("#historyTable").innerHTML=reportRows(runs,true);
       $$("[data-run]").forEach(button=>button.addEventListener("click",()=>selectRun(button.dataset.run)));
-    } catch(e) { if(credential) message(e.message); }
+    } catch(e) { if(authenticated()) message(e.message); }
   }
   async function selectRun(id) {
     const run=runs.find(x=>x.id===id) || await api("/api/runs/"+encodeURIComponent(id));
@@ -126,14 +136,14 @@
       r.samples.map(s=>'<tr><td>#'+s.number+'</td><td>'+escape(s.status)+'</td><td>'+fmt(s.latency_ms)+' ms</td><td><span class="status-label '+(s.ok?"":"bad")+'">'+(s.ok?"SUCCESS":"FAILED")+'</span></td></tr>').join("")+'</tbody></table></div>';
   }
   async function refreshReliability() {
-    if (!credential) return;
+    if (!authenticated()) return;
     try {
       const [overview,metrics]=await Promise.all([api("/api/overview"),api("/api/telemetry")]);
       $("#diagnosticHealth").textContent=overview.gateway.status==="healthy"?"Healthy":"Unreachable";
       $("#diagnosticHealthDetail").textContent=overview.gateway.latency_ms==null?"No successful health response":fmt(overview.gateway.latency_ms)+" ms / latest health probe";
       $("#diagnosticMetrics").textContent=metrics.available?"Connected":"Unavailable";
       $("#diagnosticMetricsDetail").textContent=metrics.available?metrics.series.length+" operation categories reported":metrics.reason;
-    } catch(e) { if(credential) message(e.message); }
+    } catch(e) { if(authenticated()) message(e.message); }
   }
   $("#authForm").addEventListener("submit",async event=>{
     event.preventDefault();
@@ -179,4 +189,18 @@
   setInterval(()=>{$("#clock").textContent=new Date().toLocaleTimeString([], {hour12:false});},1000);
   $("#clock").textContent=new Date().toLocaleTimeString([], {hour12:false});
   updateConcurrency();
+  async function bootstrapAuth() {
+    try {
+      const response = await fetch("/api/auth/status", {cache:"no-store"});
+      if (!response.ok) return;
+      const mode = await response.json();
+      if (!mode.auto_login) return;
+      devAutoAuth = true;
+      $("#authOverlay").classList.add("hidden");
+      navigate("overview");
+    } catch (_) {
+      // The operator-token form remains available if auto-login fails.
+    }
+  }
+  bootstrapAuth();
 })();

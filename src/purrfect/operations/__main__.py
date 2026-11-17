@@ -15,8 +15,12 @@ def main():
     client_token = settings.get("PURR_OPERATIONS_GATEWAY_TOKEN")
     if not token or not client_token:
         raise RuntimeError("Operations and Gateway service credentials are required")
+    auto_auth = (settings.get("PURR_ENV", "production").lower() == "development"
+                 and settings.get("PURR_OPERATIONS_DEV_AUTO_AUTH", "1") == "1"
+                 and host in ("127.0.0.1", "::1", "localhost"))
     app = build_console(
         operator_token=token,
+        dev_auto_auth=auto_auth,
         gateway_token=client_token,
         gateway_url=settings.get("PURR_OPERATIONS_GATEWAY_URL", "http://127.0.0.1:8765"),
         metrics_token=settings.get("PURR_OPERATIONS_METRICS_TOKEN") or None,

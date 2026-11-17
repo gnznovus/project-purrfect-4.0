@@ -173,3 +173,43 @@ async def test_http_failures_record_status_without_body():
     assert result["statuses"] == {"503": 2}
     assert "private model failure" not in str(result)
     assert result["p95_ms"] is None
+
+
+def test_local_dev_auto_auth_skips_token_only_for_same_origin_loopback(tmp_path):
+    store = BenchmarkStore(tmp_path / "dev-auth.db")
+    app = build_console(operator_token=OPERATOR, gateway_token=GATEWAY,
+                        gateway_url="http://gateway.test", metrics_token=MONITOR,
+                        store=store, transport=httpx.MockTransport(gateway),
+                        dev_auto_auth=True)
+    try:
+        with TestClient(app, base_url="http://127.0.0.1:8775",
+                        client=("127.0.0.1", 50000)) as browser:
+            result = browser.get("/api/auth/status")
+            assert result.json() == {"auto_login": True}
+            assert OPERATOR not in result.text
+            assert browser.get("/api/runs").status_code == 200
+            assert browser.post("/api/benchmarks", json={
+                "profile": "greeting", "samples": 1, "concurrency": 1,
+            }, headers={"Origin": "http://127.0.0.1:8775"}).status_code == 200
+            assert browser.get("/api/runs", headers={
+                "Sec-Fetch-Site": "cross-site",
+            }).status_code == 401
+            assert browser.post("/api/benchmarks", json={
+                "profile": "greeting", "samples": 1, "concurrency": 1,
+            }, headers={"Origin": "http://evil.test"}).status_code == 401
+        with TestClient(app, base_url="http://evil.test",
+                        client=("127.0.0.1", 50000)) as rebound:
+            assert rebound.get("/api/auth/status").json() == {"auto_login": False}
+            assert rebound.get("/api/runs").status_code == 401
+        with TestClient(app, base_url="http://127.0.0.1:8775",
+                        client=("10.0.0.4", 50000)) as remote:
+            assert remote.get("/api/auth/status").json() == {"auto_login": False}
+            assert remote.get("/api/runs").status_code == 401
+    finally:
+        store.close()
+
+
+def test_dev_auth_not_enabled_by_default_even_for_localhost(console):
+    client, _ = console
+    assert client.get("/api/auth/status").json() == {"auto_login": False}
+    assert client.get("/api/runs").status_code == 401

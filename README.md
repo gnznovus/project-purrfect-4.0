@@ -67,6 +67,10 @@ Install once with `python -m pip install -e ".[dev]"`, then run `python -m purrf
 
 `.env.example` is tracked as a safe, non-secret template. Both Gateway and Console load the project's `.env` automatically, without manually setting PowerShell variables. Explicit process environment variables take precedence for deployment. Use `python -m purrfect` and `python -m purrfect.operations` in separate terminals. Treat the `.env` file as a secret; Git-ignore is not encryption.
 
+## Console developer auto-login
+
+With `PURR_ENV=development` and the Console bound to localhost, opening `http://127.0.0.1:8775` automatically unlocks it—no token copy/paste. The operator secret stays server-side in `.env`. To disable this trusted-machine shortcut, set `PURR_OPERATIONS_DEV_AUTO_AUTH="0"` and restart the Console. Production mode always requires explicit authentication.
+
 ## Purr Operations Console (V2.9)
 
 A separate operator-only webapp offers Gateway health, metrics, bounded live inference benchmarks, persisted SQLite reports and reliability diagnostics. Start it independently with `python -m purrfect.operations` after configuring the operations and Gateway credentials. See [Operations Console setup and security](docs/operations-console.md). The Console does not add benchmark endpoints to the public Gateway or Purr Core.
