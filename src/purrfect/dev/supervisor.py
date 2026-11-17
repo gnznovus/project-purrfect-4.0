@@ -176,6 +176,7 @@ def _serve():
         state = {
             "state": "starting", "pid": os.getpid(),
             "created": current_process.create_time(), "token": token,
+            "launch_id": os.environ.get("PURR_DEV_LAUNCH_ID", ""),
             "services": {},
         }
         _write_atomic(STATE, state)
@@ -268,17 +269,21 @@ def start() -> int:
             print(f"Cannot start: {name} port {port} is occupied by another service.")
             return 2
     RUN.mkdir(exist_ok=True)
+    launch_id = secrets.token_urlsafe(24)
     with LOG.open("ab") as output:
         process = subprocess.Popen(
             [sys.executable, "-m", "purrfect.dev.supervisor", "serve"],
             cwd=ROOT, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
             creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW,
             close_fds=True,
+            env={**os.environ, "PURR_DEV_LAUNCH_ID": launch_id},
         )
     deadline = time.monotonic() + 22
     while time.monotonic() < deadline:
         state = status()
-        if state.get("pid") != process.pid:
+        # Windows venv executables can forward to another interpreter PID.
+        # Correlate startup with a launch nonce rather than Popen.pid.
+        if _read(STATE).get("launch_id") != launch_id:
             if process.poll() is not None:
                 print("Supervisor exited during startup. Inspect .purrfect/supervisor.log.")
                 return 1
