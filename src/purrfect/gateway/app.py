@@ -1,4 +1,4 @@
-"""Public API boundary: auth, validation, HTTP and SSE contracts."""
+"""Public API boundary: verified tenant/session scope, HTTP and SSE contracts."""
 import json
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -6,7 +6,8 @@ from fastapi.responses import StreamingResponse
 from purrfect.core.contracts import ChatCommand, TenantContext
 from purrfect.core.service import AccessDenied, PurrCore
 from purrfect.gateway.auth import CredentialRegistry
-from purrfect.gateway.schemas import ChatRequest, ChatResponse
+from purrfect.gateway.schemas import ChatRequest, ChatResponse, SessionResponse
+from purrfect.gateway.session_tokens import InvalidSession, SessionTickets
 from purrfect.infrastructure.scheduler import SchedulerOverloaded, SchedulerTimeout
 
 
@@ -26,7 +27,7 @@ def _frame(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def create_app(core: PurrCore, registry: CredentialRegistry) -> FastAPI:
+def create_app(core: PurrCore, registry: CredentialRegistry, tickets: SessionTickets) -> FastAPI:
     app = FastAPI(title="Purr Gateway", version="1.0.0")
 
     def authenticate(authorization: str | None = Header(default=None)) -> TenantContext:
@@ -35,18 +36,36 @@ def create_app(core: PurrCore, registry: CredentialRegistry) -> FastAPI:
             raise HTTPException(401, detail="Invalid credentials", headers={"WWW-Authenticate": "Bearer"})
         return tenant
 
-    def command_for(request: ChatRequest, tenant: TenantContext) -> ChatCommand:
+    def require_session(
+        tenant: TenantContext = Depends(authenticate),
+        x_purr_session: str | None = Header(default=None),
+    ) -> str:
+        try:
+            return tickets.verify(x_purr_session, tenant.tenant_id)
+        except InvalidSession as exc:
+            raise HTTPException(401, detail="Invalid or expired session credential") from exc
+
+    def command_for(request: ChatRequest, tenant: TenantContext, session_id: str) -> ChatCommand:
+        if request.session_id is not None and request.session_id != session_id:
+            raise HTTPException(403, detail="Session does not match credential")
         if request.product_id is not None and request.product_id not in tenant.allowed_products:
             raise HTTPException(403, detail="Product not authorized")
-        return ChatCommand(**request.model_dump())
+        return ChatCommand(session_id=session_id, message=request.message,
+                           product_id=request.product_id, product_version=request.product_version)
 
     @app.get("/v1/health")
     async def health(tenant: TenantContext = Depends(authenticate)):
         return {"service": "purr-gateway", "status": "healthy"}
 
+    @app.post("/v1/sessions", response_model=SessionResponse)
+    async def create_session(tenant: TenantContext = Depends(authenticate)):
+        result = tickets.issue(tenant.tenant_id)
+        return SessionResponse(**vars(result))
+
     @app.post("/v1/chat", response_model=ChatResponse)
-    async def chat(request: ChatRequest, tenant: TenantContext = Depends(authenticate)):
-        command = command_for(request, tenant)
+    async def chat(request: ChatRequest, tenant: TenantContext = Depends(authenticate),
+                   session_id: str = Depends(require_session)):
+        command = command_for(request, tenant, session_id)
         try:
             result = await core.respond(tenant, command)
         except Exception as exc:
@@ -58,8 +77,9 @@ def create_app(core: PurrCore, registry: CredentialRegistry) -> FastAPI:
         )
 
     @app.post("/v1/chat/stream")
-    async def chat_stream(request: ChatRequest, tenant: TenantContext = Depends(authenticate)):
-        command = command_for(request, tenant)
+    async def chat_stream(request: ChatRequest, tenant: TenantContext = Depends(authenticate),
+                          session_id: str = Depends(require_session)):
+        command = command_for(request, tenant, session_id)
 
         async def events():
             try:
@@ -67,7 +87,6 @@ def create_app(core: PurrCore, registry: CredentialRegistry) -> FastAPI:
                     yield _frame(event["event"], event["data"])
             except Exception as exc:
                 error = _translate(exc)
-                # HTTP headers have already been sent: report terminal failure in SSE.
                 yield _frame("error", {"status": error.status_code, "message": error.detail})
 
         return StreamingResponse(

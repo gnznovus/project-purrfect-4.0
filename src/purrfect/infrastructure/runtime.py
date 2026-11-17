@@ -1,8 +1,9 @@
-"""Composition root: the public gateway remains independent of domain storage."""
+"""Composition root: external credentials and transport remain outside Core."""
 import os
 from purrfect.core.service import PurrCore
 from purrfect.gateway.app import create_app
 from purrfect.gateway.auth import CredentialRegistry
+from purrfect.gateway.session_tokens import SessionTickets
 from purrfect.infrastructure.cache import RetrievalCache
 from purrfect.infrastructure.scheduler import FairInferenceScheduler
 from purrfect.infrastructure.sessions import MemorySessions, SQLiteSessions
@@ -15,6 +16,10 @@ def build_app():
     if not clients:
         raise RuntimeError("PURR_CLIENTS_JSON is required (never accept anonymous tenants)")
     registry = CredentialRegistry.from_json(clients)
+    signing_key = os.environ.get("PURR_SESSION_SIGNING_KEY")
+    if not signing_key:
+        raise RuntimeError("PURR_SESSION_SIGNING_KEY is required")
+    tickets = SessionTickets(signing_key, lifetime=int(os.getenv("PURR_SESSION_TTL", "86400")))
     backend = os.environ.get("PURR_MODEL_BACKEND", "deterministic").lower()
     if backend not in ("deterministic", "ollama"):
         raise ValueError("Unsupported inference backend")
@@ -34,4 +39,4 @@ def build_app():
     core = PurrCore(catalog=DurableSophira(path) if path else None,
                     model=model, scheduler=scheduler, sessions=sessions,
                     evidence_cache=RetrievalCache(int(os.getenv("PURR_RETRIEVAL_CACHE_SIZE", "512"))))
-    return create_app(core, registry)
+    return create_app(core, registry, tickets)

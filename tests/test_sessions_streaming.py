@@ -8,6 +8,7 @@ from purrfect.core.contracts import ChatCommand, TenantContext
 from purrfect.core.service import PurrCore
 from purrfect.gateway.app import create_app
 from purrfect.gateway.auth import CredentialRegistry
+from purrfect.gateway.session_tokens import SessionTickets
 from purrfect.infrastructure.scheduler import FairInferenceScheduler
 from purrfect.infrastructure.sessions import SQLiteSessions
 
@@ -101,11 +102,14 @@ def test_sse_contract_and_authentication():
             yield "two"
         async def complete(self, system, user):
             return "onetwo"
-    with TestClient(create_app(PurrCore(model=Model()), clients)) as client:
-        body = {"session_id": "s", "message": "hello"}
+    with TestClient(create_app(PurrCore(model=Model()), clients, SessionTickets('test-only-signing-key-longer-than-thirty-two-bytes'))) as client:
+        auth = {"Authorization": "Bearer dev-client-secret-token-1234"}
+        ticket = client.post("/v1/sessions", headers=auth).json()["session_token"]
+        body = {"message": "hello"}
         assert client.post("/v1/chat/stream", json=body).status_code == 401
         with client.stream("POST", "/v1/chat/stream", json=body, headers={
             "Authorization": "Bearer dev-client-secret-token-1234",
+            "X-Purr-Session": ticket,
         }) as res:
             assert res.status_code == 200
             assert res.headers["content-type"].startswith("text/event-stream")
@@ -121,9 +125,11 @@ def test_stream_errors_have_terminal_event():
     class Bad:
         async def complete(self, system, user):
             raise RuntimeError("internal private details")
-    with TestClient(create_app(PurrCore(model=Bad()), clients)) as client:
-        res = client.post("/v1/chat/stream", json={"session_id": "s", "message": "hello"},
-                          headers={"Authorization": "Bearer dev-client-secret-token-1234"})
+    with TestClient(create_app(PurrCore(model=Bad()), clients, SessionTickets('test-only-signing-key-longer-than-thirty-two-bytes'))) as client:
+        auth = {"Authorization": "Bearer dev-client-secret-token-1234"}
+        ticket = client.post("/v1/sessions", headers=auth).json()["session_token"]
+        res = client.post("/v1/chat/stream", json={"message": "hello"},
+                          headers=auth | {"X-Purr-Session": ticket})
         assert res.status_code == 200
         assert "event: error" in res.text
         assert "internal private details" not in res.text
