@@ -1,4 +1,5 @@
-"""Composition root: external credentials and transport remain outside Core."""
+"""Composition root: client-verifier and transport remain outside Core."""
+import json
 import os
 from purrfect.core.service import PurrCore
 from purrfect.gateway.app import create_app
@@ -19,7 +20,13 @@ def build_app():
     signing_key = os.environ.get("PURR_SESSION_SIGNING_KEY")
     if not signing_key:
         raise RuntimeError("PURR_SESSION_SIGNING_KEY is required")
-    tickets = SessionTickets(signing_key, lifetime=int(os.getenv("PURR_SESSION_TTL", "86400")))
+    previous = json.loads(os.environ.get("PURR_SESSION_PREVIOUS_KEYS", "[]"))
+    if not isinstance(previous, list):
+        raise ValueError("PURR_SESSION_PREVIOUS_KEYS must be an array")
+    tickets = SessionTickets(
+        signing_key, lifetime=int(os.getenv("PURR_SESSION_TTL", "86400")),
+        previous_secrets=tuple(previous),
+    )
     backend = os.environ.get("PURR_MODEL_BACKEND", "deterministic").lower()
     if backend not in ("deterministic", "ollama"):
         raise ValueError("Unsupported inference backend")

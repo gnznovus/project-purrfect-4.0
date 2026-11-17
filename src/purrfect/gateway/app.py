@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from purrfect.core.contracts import ChatCommand, TenantContext
 from purrfect.core.service import AccessDenied, PurrCore
-from purrfect.gateway.auth import CredentialRegistry
+from purrfect.gateway.auth import ClientVerifier
 from purrfect.gateway.schemas import ChatRequest, ChatResponse, SessionResponse
 from purrfect.gateway.session_tokens import InvalidSession, SessionTickets
 from purrfect.infrastructure.scheduler import SchedulerOverloaded, SchedulerTimeout
@@ -27,7 +27,7 @@ def _frame(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def create_app(core: PurrCore, registry: CredentialRegistry, tickets: SessionTickets) -> FastAPI:
+def create_app(core: PurrCore, registry: ClientVerifier, tickets: SessionTickets) -> FastAPI:
     app = FastAPI(title="Purr Gateway", version="1.0.0")
 
     def authenticate(authorization: str | None = Header(default=None)) -> TenantContext:
