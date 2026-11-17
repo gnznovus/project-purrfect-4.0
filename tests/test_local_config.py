@@ -14,6 +14,7 @@ def test_new_dotenv_bootstrap_matches_gateway_and_console_credentials(tmp_path):
     assert settings.get("PURR_OPERATIONS_METRICS_TOKEN") == settings.get("PURR_METRICS_TOKEN")
     assert len(settings.get("PURR_OPERATIONS_TOKEN")) >= 64
     assert len(settings.get("PURR_SESSION_SIGNING_KEY")) >= 64
+    assert settings.get("PURR_OPERATIONS_DEV_AUTO_AUTH") == "1"
     initial = path.read_bytes()
     with pytest.raises(FileExistsError):
         initialize(path)
@@ -54,6 +55,7 @@ def test_migrates_old_json_secrets_without_rotation(tmp_path):
     migrated = load_settings(destination)
     assert json.loads(migrated.get("PURR_CLIENTS_JSON")) == original["PURR_CLIENTS_JSON"]
     assert migrated.get("PURR_OPERATIONS_PORT") == "8775"
+    assert migrated.get("PURR_OPERATIONS_DEV_AUTO_AUTH") == "1"
     assert migrated.get("PURR_SESSION_SIGNING_KEY") == original["PURR_SESSION_SIGNING_KEY"]
     assert json.loads(previous.read_text()) == original
 
