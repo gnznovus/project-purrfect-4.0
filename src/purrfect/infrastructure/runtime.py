@@ -7,6 +7,8 @@ from purrfect.gateway.app import create_app
 from purrfect.gateway.auth import CredentialRegistry
 from purrfect.gateway.session_tokens import SessionTickets
 from purrfect.infrastructure.cache import RetrievalCache
+from purrfect.infrastructure.metrics import Metrics
+from purrfect.infrastructure.instrumentation import InstrumentedScheduler
 from purrfect.infrastructure.scheduler import FairInferenceScheduler
 from purrfect.infrastructure.sessions import MemorySessions, SQLiteSessions
 from purrfect.ollama import OllamaModel
@@ -35,11 +37,13 @@ def build_app():
                          base_url=os.getenv("PURR_OLLAMA_URL", "http://localhost:11434"))
              if backend == "ollama" else None)
     path = os.environ.get("PURR_SOPHIA_DB")
+    metrics = Metrics()
     scheduler = FairInferenceScheduler(
         slots=int(os.getenv("PURR_INFERENCE_CONCURRENCY", "1")),
         max_waiting=int(os.getenv("PURR_QUEUE_LIMIT", "4")),
         max_waiting_per_tenant=int(os.getenv("PURR_TENANT_QUEUE_LIMIT", "2")),
         queue_timeout=float(os.getenv("PURR_QUEUE_TIMEOUT", "5")),
+        metrics=metrics,
     )
     redis_url = os.getenv("PURR_REDIS_URL")
     coordinator = None
@@ -68,13 +72,15 @@ def build_app():
                 lease_seconds=int(os.getenv("PURR_INFERENCE_LEASE_SECONDS", "30")),
                 wait_seconds=float(os.getenv("PURR_GLOBAL_INFERENCE_WAIT_SECONDS", "5")),
                 local_scheduler=scheduler,
+                metrics=metrics,
             )
     else:
         session_db = os.getenv("PURR_SESSION_DB", "./purr-sessions.db")
         sessions = (SQLiteSessions(session_db, history_limit=int(os.getenv("PURR_HISTORY_LIMIT", "6")))
                     if session_db else MemorySessions())
     core = PurrCore(catalog=DurableSophira(path) if path else None,
-                    model=model, scheduler=scheduler, sessions=sessions,
+                    model=model, scheduler=InstrumentedScheduler(scheduler, metrics), sessions=sessions,
                     session_coordinator=coordinator,
                     evidence_cache=RetrievalCache(int(os.getenv("PURR_RETRIEVAL_CACHE_SIZE", "512"))))
-    return create_app(core, registry, tickets)
+    return create_app(core, registry, tickets, metrics=metrics,
+                      metrics_token=os.getenv("PURR_METRICS_TOKEN") or None)
