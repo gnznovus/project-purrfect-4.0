@@ -52,6 +52,7 @@ def _new_secrets() -> dict[str, str]:
     gateway = secrets.token_hex(32)
     monitor = secrets.token_hex(32)
     return {
+        "PURR_ENV": "development",
         "PURR_CLIENTS_JSON": json.dumps(
             [{"token": gateway, "tenant_id": "dev", "products": ["demo"]}],
             separators=(",", ":"),
@@ -90,6 +91,8 @@ def _migrate_legacy(path: Path) -> dict[str, str]:
 
 def initialize(path: Path | None = None, *, legacy_path: Path | None = None) -> Path:
     target = path if path is not None else config_path()
+    if os.environ.get("PURR_ENV", "development").lower() != "development":
+        raise RuntimeError("Development secrets bootstrap disabled outside development")
     old = legacy_path if legacy_path is not None else legacy_config_path()
     if target.is_symlink() or target.exists():
         raise FileExistsError(".env already exists; refusing to overwrite credentials")
