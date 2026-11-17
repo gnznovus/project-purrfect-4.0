@@ -13,6 +13,12 @@ Purr is a shared multi-tenant AI provider for Sophia-grounded product guidance. 
 
 WordPress/Purr Assistant, container infrastructure, and product-specific UI are not bundled.
 
+## Railway staging (container deployment)
+
+Railway staging uses two independent FastAPI services built from the root `Dockerfile`, configured with `/deploy/railway.gateway.json` and `/deploy/railway.operations.json`. Runtime requirements: `PURR_ENV=production`, separate server-side secrets, and dynamic `PORT`. The Operations service stays **private** until hosted operator authentication is implemented. Attach one persistent volume at `/data` for Operations benchmark history.
+
+**Deployment guide:** [docs/railway-staging.md](docs/railway-staging.md). This does **not** deploy to your Railway account automatically and does not implement the React/Plesk UI yet.
+
 ## Purr CLI — one command for development (Windows)
 
 Run the one-time bootstrap from the repository root:
