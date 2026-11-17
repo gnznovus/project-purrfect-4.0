@@ -22,7 +22,10 @@ def _encode(data: bytes) -> str:
 def _decode(data: str) -> bytes:
     if not data.isascii() or not data or len(data) > 1024:
         raise InvalidSession("Invalid session credential")
-    return base64.b64decode(data + "=" * (-len(data) % 4), altchars=b"-_", validate=True)
+    decoded = base64.b64decode(data + "=" * (-len(data) % 4), altchars=b"-_", validate=True)
+    if _encode(decoded) != data:
+        raise InvalidSession("Noncanonical session credential")
+    return decoded
 
 
 @dataclass(frozen=True)
