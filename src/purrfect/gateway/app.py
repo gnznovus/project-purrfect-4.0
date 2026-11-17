@@ -92,6 +92,11 @@ def create_app(core: PurrCore, registry: ClientVerifier, tickets: SessionTickets
         return ChatCommand(session_id=session_id, message=request.message,
                            product_id=request.product_id, product_version=request.product_version)
 
+    @app.get("/healthz", include_in_schema=False)
+    async def deploy_health():
+        # Liveness only: do not disclose tenant credentials or inference state.
+        return {"status": "ok"}
+
     @app.get("/v1/health")
     async def health(tenant: TenantContext = Depends(authenticate)):
         return {"service": "purr-gateway", "status": "healthy"}

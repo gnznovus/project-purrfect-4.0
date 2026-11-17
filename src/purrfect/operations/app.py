@@ -71,6 +71,11 @@ def build_console(*, operator_token: str, gateway_token: str, gateway_url: str,
             return True
         raise HTTPException(401, detail="Invalid operations credentials")
 
+    @app.get("/healthz", include_in_schema=False)
+    async def deploy_health():
+        # Railway liveness: never report private metrics or credentials.
+        return {"status": "ok"}
+
     @app.get("/api/auth/status")
     async def auth_status(request: Request):
         # The browser learns only the authentication mode, not the .env secret.

@@ -61,3 +61,54 @@ jobs:
             & $cmd stop
             if ($LASTEXITCODE -ne 0) { throw 'stop failed' }
           }
+
+  railway-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Python 3.14 staging image
+        run: docker build -t purr-staging:test .
+      - name: Smoke Gateway and private Operations entrypoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker volume create purr-staging-ops
+          cleanup() {
+            docker rm -f purr-stage-gateway purr-stage-operations >/dev/null 2>&1 || true
+            docker volume rm purr-staging-ops >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker run -d --name purr-stage-gateway -p 18080:8080 \
+            -e PURR_ENV=production -e PORT=8080 \
+            -e PURR_MODEL_BACKEND=deterministic -e PURR_SESSION_DB= \
+            -e PURR_CLIENTS_JSON='[{"token":"gateway-ci-client-token-32-characters-example","tenant_id":"ci","products":["demo"]}]' \
+            -e PURR_SESSION_SIGNING_KEY=signing-key-for-ci-tests-32-characters \
+            purr-staging:test
+          docker run -d --name purr-stage-operations -p 18081:8080 \
+            -v purr-staging-ops:/data \
+            -e PURR_ENV=production -e PORT=8080 \
+            -e PURR_OPERATIONS_DEV_AUTO_AUTH=0 \
+            -e PURR_OPERATIONS_TOKEN=operator-token-ci-example-32-characters-long \
+            -e PURR_OPERATIONS_GATEWAY_TOKEN=gateway-ci-client-token-32-characters-example \
+            -e PURR_OPERATIONS_GATEWAY_URL=http://gateway.example.internal:8080 \
+            -e PURR_OPERATIONS_DB=/data/purr-operations.db \
+            purr-staging:test python -m purrfect.deploy operations
+          python - <<'PY'
+          import time, urllib.error, urllib.request
+          for port in (18080, 18081):
+              for attempt in range(60):
+                  try:
+                      with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=1) as response:
+                          assert response.read() == b'{"status":"ok"}'
+                      break
+                  except (OSError, AssertionError):
+                      time.sleep(.25)
+              else:
+                  raise SystemExit(f"service on {port} failed health check")
+              try:
+                  urllib.request.urlopen(f"http://127.0.0.1:{port}/api/runs" if port==18081 else f"http://127.0.0.1:{port}/v1/health")
+              except urllib.error.HTTPError as err:
+                  assert err.code == 401
+              else:
+                  raise SystemExit("Protected endpoint allowed anonymous request")
+          PY
